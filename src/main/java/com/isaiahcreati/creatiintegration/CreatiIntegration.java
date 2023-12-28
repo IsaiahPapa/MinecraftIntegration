@@ -1,6 +1,6 @@
 package com.isaiahcreati.creatiintegration;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+
+import com.google.gson.*;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -19,7 +19,10 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.ForgeRegistries;
+import org.json.JSONObject;
 import org.slf4j.Logger;
+
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(CreatiIntegration.MOD_ID)
@@ -28,6 +31,7 @@ public class CreatiIntegration {
     public static final Logger LOGGER = LogUtils.getLogger();
     private Socket socket;
 
+
     public CreatiIntegration() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
@@ -35,6 +39,18 @@ public class CreatiIntegration {
 
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
+
+        //Register Mod Entities
+//        ModEntities.REGISTER.register(modEventBus);
+
+        JsonArray array = new JsonArray();
+
+        for (String effectName : ForgeRegistries.MOB_EFFECTS.getKeys().stream().map(val -> val.getPath()).toList()) {
+            array.add(effectName);
+        }
+        LOGGER.info("Types of effects: " + array);
+
+
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -49,45 +65,60 @@ public class CreatiIntegration {
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        try{
+        try {
             socket = IO.socket("http://localhost:3000");
             socket.on(Socket.EVENT_CONNECT, args -> LOGGER.info("Connected to WebSocket"));
             socket.on("spawn_mob", args -> {
                 // Handle mob spawning
             });
 
-
-
             socket.on("timer", args -> {
-                String message = (String) args[0];
+                String message = args[0].toString();
                 event.getServer().getPlayerList().broadcastSystemMessage(Component.literal(message), false);
             });
 
-
+            socket.on("effect", args -> {
+                String message = args[0].toString();
+                for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                    Taunts.applyPotionEffect(player, message);
+                }
+            });
 
             socket.on("spawn", args -> {
-                String jsonString = (String) args[0];
-                JsonObject jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
+                try {
+                    if (!(args[0] instanceof String jsonString)) {
+                        event.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Failed to spawn mob. jsonString is null"), false);
+                        return;
+                    }
+                    SpawnPayload payload = new SpawnPayload(jsonString);
 
-                String mobId = jsonObject.get("mobId").getAsString();
-                event.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Trying to spawn " + mobId), false);
+                    event.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Trying to spawn " + payload.amount + " of " + payload.mobId), false);
 
-                for(ServerPlayer player : event.getServer().getPlayerList().getPlayers()){
-                    MobUtils.spawnMobNearPlayer(player, mobId);
+                    for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                        MobUtils.spawnMobNearPlayer(player, payload.mobId, payload.amount);
+                    }
+
+                } catch (JsonSyntaxException e) {
+                    LOGGER.error("Failed to spawn mob: " + e);
+                    // Handle parsing error
                 }
             });
 
             socket.on("taunt", args -> {
                 String action = (String) args[0];
 
-                for(ServerPlayer player : event.getServer().getPlayerList().getPlayers()){
-                    if(action.equals("tnt")){
-                        MobUtils.spawnPrimedTntOnPlayer(event.getServer().overworld(), player);
-                    }
-                    else if(action.equals("punch")){
-                        MobUtils.smackPlayer(player);
-                    }else if(action.equals("noise")){
-                        MobUtils.playSuccessSound(player);
+                for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                    switch (action) {
+                        case "tnt" -> MobUtils.spawnPrimedTntOnPlayer(event.getServer().overworld(), player);
+                        case "fakeTnt" -> {
+//                        MobUtils.spawnFakePrimedTntOnPlayer(event.getServer().overworld(), player);
+                        }
+                        case "shuffle" -> Taunts.ShuffleInventory(player);
+                        case "punch" -> MobUtils.smackPlayer(player);
+                        case "noise" -> MobUtils.playSuccessSound(player);
+                        case "strike" -> Taunts.strikeDownPlayer(player);
+                        case "break" -> Taunts.breakBlockUnderPlayer(player);
+                        case "wild" -> Taunts.teleportPlayerToRandomLocation(player);
                     }
                 }
             });
@@ -99,14 +130,16 @@ public class CreatiIntegration {
             e.printStackTrace();
         }
     }
+
     @SubscribeEvent
-    public void onServerStopping(ServerStoppingEvent event){
+    public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Server stopping...");
         if (socket != null) {
             LOGGER.info("Disconnecting from SocketIO Server...");
             socket.disconnect();
         }
     }
+
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         // Get the username of the player who logged in
@@ -127,4 +160,5 @@ public class CreatiIntegration {
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
         }
     }
+
 }
