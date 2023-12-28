@@ -119,6 +119,7 @@ public class CreatiIntegration {
                         case "strike" -> Taunts.strikeDownPlayer(player);
                         case "break" -> Taunts.breakBlockUnderPlayer(player);
                         case "wild" -> Taunts.teleportPlayerToRandomLocation(player);
+                        case "drop" -> Taunts.dropHand(player);
                     }
                 }
             });
