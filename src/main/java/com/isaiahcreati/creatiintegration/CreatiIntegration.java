@@ -1,15 +1,23 @@
 package com.isaiahcreati.creatiintegration;
 
 import com.google.gson.*;
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
 import net.minecraft.client.Minecraft;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
@@ -23,6 +31,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import java.util.List;
+
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(CreatiIntegration.MOD_ID)
@@ -31,14 +41,18 @@ public class CreatiIntegration {
     public static final Logger LOGGER = LogUtils.getLogger();
     private Socket socket;
 
+    private boolean started;
+
 
     public CreatiIntegration() {
+        started = false;
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         modEventBus.addListener(this::commonSetup);
 
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
+
 
         //Register Mod Entities
 //        ModEntities.REGISTER.register(modEventBus);
@@ -66,61 +80,56 @@ public class CreatiIntegration {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         try {
-            socket = IO.socket("http://localhost:3000");
+            //TODO: Make this work with the actual alerts backend
+            socket = IO.socket("http://localhost:8080");
             socket.on(Socket.EVENT_CONNECT, args -> LOGGER.info("Connected to WebSocket"));
-            socket.on("spawn_mob", args -> {
-                // Handle mob spawning
-            });
 
-            socket.on("timer", args -> {
-                String message = args[0].toString();
-                event.getServer().getPlayerList().broadcastSystemMessage(Component.literal(message), false);
-            });
-
-            socket.on("effect", args -> {
-                String message = args[0].toString();
-                for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
-                    Taunts.applyPotionEffect(player, message);
-                }
-            });
-
-            socket.on("spawn", args -> {
+            socket.on("interaction:minecraft", args -> {
                 try {
+                    LOGGER.info("Got interaction: " + args.toString());
                     if (!(args[0] instanceof String jsonString)) {
-                        event.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Failed to spawn mob. jsonString is null"), false);
+                        ChatHelpers.Broadcast("Incorrect message type for interaction:minecraft. Should be String, got '" +  args[0].getClass().getName() + "'");
                         return;
                     }
-                    SpawnPayload payload = new SpawnPayload(jsonString);
 
-                    event.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Trying to spawn " + payload.amount + " of " + payload.mobId), false);
-
+                    Gson gson = new GsonBuilder().registerTypeAdapter(Payload.class, new PayloadDeserializer()).create();
+                    Payload payload = gson.fromJson(jsonString, Payload.class);
+                    ChatHelpers.Broadcast("[interaction:minecraft] Type '" +  payload.action + "'");
+                    String fullPayloadJson = gson.toJson(payload);
+                    LOGGER.info("Full Payload: " + fullPayloadJson);
                     for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
-                        MobUtils.spawnMobNearPlayer(player, payload.mobId, payload.amount);
+                        switch (payload.action) {
+                            case SPAWN:
+                                if (!(payload.details instanceof SpawnDetails spawnDetails)) break;
+                                MobUtils.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount);
+                                player.sendSystemMessage(Component.literal("Trying to spawn " + spawnDetails.amount + " of " + spawnDetails.mobId), false);
+                                break;
+                            case EFFECT:
+                                if (!(payload.details instanceof EffectDetails effectDetails)) break;
+                                player.sendSystemMessage(Component.literal("Trying to spawn give " + player.getName() + " effect " + effectDetails.effectId), false);
+                                Taunts.applyPotionEffect(player, effectDetails.effectId, effectDetails.duration, effectDetails.amplifier);
+                                break;
+                            case TAUNT:
+                                if (!(payload.details instanceof TauntDetails tauntDetails)) break;
+                                switch (tauntDetails.tauntId) {
+                                    case "tnt" -> Taunts.spawnPrimedTntOnPlayer(event.getServer().overworld(), player);
+                                    case "shuffle" -> Taunts.ShuffleInventory(player);
+                                    case "punch" -> Taunts.smackPlayer(player);
+                                    case "noise" -> Utils.playSoundByName(player, "CREEPER_PRIME");
+                                    case "strike" -> Taunts.strikeDownPlayer(player);
+                                    case "break" -> Taunts.breakBlockUnderPlayer(player);
+                                    case "wild" -> Taunts.teleportPlayerToRandomLocation(player);
+                                    case "drop" -> Taunts.dropHand(player);
+                                    case "cobweb" -> Taunts.webBlockPlayer(player);
+                                }
+                                player.sendSystemMessage(Component.literal("Trying to taunt " + player.getName() + " with " + tauntDetails.tauntId), false);
+                        }
                     }
+
 
                 } catch (JsonSyntaxException e) {
                     LOGGER.error("Failed to spawn mob: " + e);
                     // Handle parsing error
-                }
-            });
-
-            socket.on("taunt", args -> {
-                String action = (String) args[0];
-
-                for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
-                    switch (action) {
-                        case "tnt" -> MobUtils.spawnPrimedTntOnPlayer(event.getServer().overworld(), player);
-                        case "fakeTnt" -> {
-//                        MobUtils.spawnFakePrimedTntOnPlayer(event.getServer().overworld(), player);
-                        }
-                        case "shuffle" -> Taunts.ShuffleInventory(player);
-                        case "punch" -> MobUtils.smackPlayer(player);
-                        case "noise" -> MobUtils.playSuccessSound(player);
-                        case "strike" -> Taunts.strikeDownPlayer(player);
-                        case "break" -> Taunts.breakBlockUnderPlayer(player);
-                        case "wild" -> Taunts.teleportPlayerToRandomLocation(player);
-                        case "drop" -> Taunts.dropHand(player);
-                    }
                 }
             });
 
@@ -160,6 +169,25 @@ public class CreatiIntegration {
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
         }
+    }
+
+    @Mod.EventBusSubscriber
+    public class CommandRegistration {
+
+        @SubscribeEvent
+        public static void onCommandsRegister(RegisterCommandsEvent event) {
+            CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+
+            dispatcher.register(Commands.literal("webme")
+                    .requires(source -> source.hasPermission(2)) // Requires permission level 2 (OP)
+                    .executes(context -> {
+                        ServerPlayer player = context.getSource().getPlayerOrException();
+                        Taunts.webBlockPlayer(player);
+                        return 1; // Return 1 to indicate success
+                    })
+            );
+        }
+
     }
 
 }
