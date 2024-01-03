@@ -32,10 +32,10 @@ public final class MobUtils {
     private static final Random rand = new Random();
 
     static public void spawnMobNearPlayer(ServerPlayer player, String mobId) {
-        spawnMobNearPlayer(player, mobId, 1);
+        spawnMobNearPlayer(player, mobId, 1, "");
     }
 
-    static public void spawnMobNearPlayer(ServerPlayer player, String mobId, int amount){
+    static public void spawnMobNearPlayer(ServerPlayer player, String mobId, int amount, String mobName){
         // Find the Entity given the mobId
         Optional<EntityType<?>> mobByString = EntityType.byString(mobId.toLowerCase());
         if(!mobByString.isPresent()){
@@ -50,7 +50,7 @@ public final class MobUtils {
                 LOGGER.info("Cannot spawn mob, no safe position");
                 return;
             };
-            mob.setCustomName(Component.literal("${redeemer.name}"));
+            mob.setCustomName(Component.literal(mobName));
             mob.setPos(safePosition.x, safePosition.y, safePosition.z); // Center the zombie in the block
             player.level().addFreshEntity(mob);
         }

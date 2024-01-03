@@ -9,8 +9,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.ItemSteerable;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
@@ -47,5 +52,23 @@ public class Utils {
         // Check if the block below the position is solid and the two blocks above are air
         return world.getBlockState(pos.below()).isSolidRender(world, pos.below()) &&
                 world.isEmptyBlock(pos) && world.isEmptyBlock(pos.above());
+    }
+
+    public static void givePlayerItem(ServerPlayer player, String itemName, int amount){
+        itemName = itemName.toLowerCase();
+        ResourceLocation resource = ResourceLocation.tryParse(itemName);
+        Item item = ForgeRegistries.ITEMS.getValue(resource);
+        if (item == null) {
+            LOGGER.info("Failed to find item 'minecraft:" + itemName + "'");
+            return;
+        }
+        ItemStack itemStack = new ItemStack(item, amount); // You can change the quantity if needed
+        boolean wasAdded = player.getInventory().add(itemStack);
+
+        if (!wasAdded) {
+            // If the player's inventory is full, drop the item in the world
+            ItemEntity itemEntity = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), itemStack);
+            player.level().addFreshEntity(itemEntity);
+        }
     }
 }

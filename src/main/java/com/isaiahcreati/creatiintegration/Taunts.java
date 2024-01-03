@@ -41,6 +41,7 @@ public class Taunts {
 
     public static void applyPotionEffect(ServerPlayer player, String effectName, int durationSeconds, int amplifier){
         ResourceLocation resource= new ResourceLocation(effectName);
+
         MobEffect effect = ForgeRegistries.MOB_EFFECTS.getValue(resource);
         if(effect == null){
             LOGGER.error("Failed to find effect: " + effectName);

@@ -18,10 +18,17 @@ enum Action {
     }
 }
 
+class Metadata {
+    String streamerName;
+    String redeemerName;
+}
+
 
 class Payload<T> {
     Action action;
     T details;
+    Metadata metadata;
+
 }
 
 // Detail classes
@@ -32,7 +39,7 @@ class ItemDetails {
 }
 
 class EffectDetails {
-    String effectId;
+    String potionId;
     int amplifier;
     int duration;
 }
@@ -56,6 +63,7 @@ class PayloadDeserializer implements JsonDeserializer<Payload> {
 
         Payload payload = new Payload();
         payload.action = Action.fromString(action);
+        payload.metadata = context.deserialize(jsonObject.get("metadata"), Metadata.class);
 
         switch (action) {
             case "give":

@@ -11,6 +11,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -39,7 +40,7 @@ import java.util.List;
 public class CreatiIntegration {
     public static final String MOD_ID = "creati_integration";
     public static final Logger LOGGER = LogUtils.getLogger();
-    private Socket socket;
+    private static Socket socket;
 
     private boolean started;
 
@@ -80,9 +81,15 @@ public class CreatiIntegration {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         try {
-            //TODO: Make this work with the actual alerts backend
-            socket = IO.socket("http://localhost:8080");
-            socket.on(Socket.EVENT_CONNECT, args -> LOGGER.info("Connected to WebSocket"));
+            //TODO: Figure out a way to change this to production URL when building
+            socket = IO.socket("ws://127.0.0.1:8006/integration");
+            socket.on(Socket.EVENT_CONNECT, args -> {
+                LOGGER.info("Connected to WebSocket");
+            });
+
+            socket.on("sys", args -> {
+                ChatHelpers.Broadcast(args[0].toString());
+            });
 
             socket.on("interaction:minecraft", args -> {
                 try {
@@ -99,15 +106,20 @@ public class CreatiIntegration {
                     LOGGER.info("Full Payload: " + fullPayloadJson);
                     for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
                         switch (payload.action) {
+                            case GIVE:
+                                if (!(payload.details instanceof ItemDetails itemDetails)) break;
+                                Utils.givePlayerItem(player, itemDetails.itemId, itemDetails.amount);
+                                player.sendSystemMessage(Component.literal("Trying to give item " + itemDetails.type + " of " + itemDetails.itemId), false);
+                                break;
                             case SPAWN:
                                 if (!(payload.details instanceof SpawnDetails spawnDetails)) break;
-                                MobUtils.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount);
+                                MobUtils.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount, payload.metadata.redeemerName);
                                 player.sendSystemMessage(Component.literal("Trying to spawn " + spawnDetails.amount + " of " + spawnDetails.mobId), false);
                                 break;
                             case EFFECT:
                                 if (!(payload.details instanceof EffectDetails effectDetails)) break;
-                                player.sendSystemMessage(Component.literal("Trying to spawn give " + player.getName() + " effect " + effectDetails.effectId), false);
-                                Taunts.applyPotionEffect(player, effectDetails.effectId, effectDetails.duration, effectDetails.amplifier);
+                                player.sendSystemMessage(Component.literal("Trying to spawn give " + player.getName() + " effect " + effectDetails.potionId), false);
+                                Taunts.applyPotionEffect(player, effectDetails.potionId, effectDetails.duration, effectDetails.amplifier);
                                 break;
                             case TAUNT:
                                 if (!(payload.details instanceof TauntDetails tauntDetails)) break;
@@ -178,11 +190,16 @@ public class CreatiIntegration {
         public static void onCommandsRegister(RegisterCommandsEvent event) {
             CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
-            dispatcher.register(Commands.literal("webme")
-                    .requires(source -> source.hasPermission(2)) // Requires permission level 2 (OP)
+            dispatcher.register(Commands.literal("start")
+                    .requires(source -> source.hasPermission(0))
                     .executes(context -> {
-                        ServerPlayer player = context.getSource().getPlayerOrException();
-                        Taunts.webBlockPlayer(player);
+                        if(!socket.isActive()){
+                            ServerPlayer player = context.getSource().getPlayerOrException();
+                            player.sendSystemMessage(Component.literal("SocketIO not connected :("));
+                            return 0;
+                        }
+                        //TODO: make this alert ID configurable
+                        socket.emit("join", "ae337b08-79a6-4eae-8228-5b7c14e8ee37");
                         return 1; // Return 1 to indicate success
                     })
             );
