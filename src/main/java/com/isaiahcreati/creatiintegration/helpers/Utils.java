@@ -1,4 +1,4 @@
-package com.isaiahcreati.creatiintegration;
+package com.isaiahcreati.creatiintegration.helpers;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
@@ -9,11 +9,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.ItemSteerable;
-import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
@@ -54,21 +52,15 @@ public class Utils {
                 world.isEmptyBlock(pos) && world.isEmptyBlock(pos.above());
     }
 
-    public static void givePlayerItem(ServerPlayer player, String itemName, int amount){
+    public static MobEffect getPotionEffect(String effectName){
+        ResourceLocation resource = ResourceLocation.tryParse(effectName);
+        return ForgeRegistries.MOB_EFFECTS.getValue(resource);
+    }
+
+    public static Item getItemById(String itemName){
         itemName = itemName.toLowerCase();
         ResourceLocation resource = ResourceLocation.tryParse(itemName);
-        Item item = ForgeRegistries.ITEMS.getValue(resource);
-        if (item == null) {
-            LOGGER.info("Failed to find item 'minecraft:" + itemName + "'");
-            return;
-        }
-        ItemStack itemStack = new ItemStack(item, amount); // You can change the quantity if needed
-        boolean wasAdded = player.getInventory().add(itemStack);
-
-        if (!wasAdded) {
-            // If the player's inventory is full, drop the item in the world
-            ItemEntity itemEntity = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), itemStack);
-            player.level().addFreshEntity(itemEntity);
-        }
+        return ForgeRegistries.ITEMS.getValue(resource);
     }
+
 }

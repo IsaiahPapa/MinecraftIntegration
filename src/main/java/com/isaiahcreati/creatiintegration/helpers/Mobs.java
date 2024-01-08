@@ -1,32 +1,20 @@
-package com.isaiahcreati.creatiintegration;
+package com.isaiahcreati.creatiintegration.helpers;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.PlayerChatMessage;
-import net.minecraft.network.protocol.game.ClientboundSoundPacket;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.item.PrimedTnt;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
 
-public final class MobUtils {
+public final class Mobs {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     private static final Random rand = new Random();
@@ -37,23 +25,40 @@ public final class MobUtils {
 
     static public void spawnMobNearPlayer(ServerPlayer player, String mobId, int amount, String mobName){
         // Find the Entity given the mobId
-        Optional<EntityType<?>> mobByString = EntityType.byString(mobId.toLowerCase());
-        if(!mobByString.isPresent()){
-            LOGGER.info("Mob is not present");
-            return;
-        }
+        EntityType<?> mob =  getMobByName(mobId);
+        if(mob == null) return;
+
 
         for (int i = 0; i < amount; i++) {
-            Entity mob  = mobByString.get().create(player.level());
+            Entity mobEntity  = mob.create(player.level());
+            if(mobEntity == null){
+                LOGGER.info("Cannot spawn mob. mobEntity is null");
+            }
             Vec3 safePosition = getSafeMobPosition(player);
             if(safePosition == null) {
-                LOGGER.info("Cannot spawn mob, no safe position");
+                LOGGER.info("Cannot spawn mob. No safe position");
                 return;
             };
-            mob.setCustomName(Component.literal(mobName));
-            mob.setPos(safePosition.x, safePosition.y, safePosition.z); // Center the zombie in the block
-            player.level().addFreshEntity(mob);
+            mobEntity.setCustomName(Component.literal(mobName));
+            mobEntity.setPos(safePosition.x, safePosition.y, safePosition.z); // Center the zombie in the block
+            player.level().addFreshEntity(mobEntity);
         }
+    }
+
+
+    public static EntityType<?> getMobByName(String mobId) {
+        try{
+            Optional<EntityType<?>> mobByString = EntityType.byString(mobId.toLowerCase());
+            if(!mobByString.isPresent()){
+                LOGGER.info("Mob is not present");
+                return null;
+            }
+            return mobByString.get();
+        }catch(NoSuchElementException error){
+            LOGGER.info("failed to getMobByName.", error);
+            return null;
+        }
+
     }
     static public Vec3 getSafeMobPosition(ServerPlayer player) {
         ServerLevel world = player.serverLevel();
