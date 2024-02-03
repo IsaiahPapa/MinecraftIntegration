@@ -1,14 +1,15 @@
 package com.isaiahcreati.creatiintegration;
 
 import com.google.gson.*;
+import com.isaiahcreati.creatiintegration.handlers.EventHandler;
 import com.isaiahcreati.creatiintegration.helpers.Chat;
 import com.isaiahcreati.creatiintegration.helpers.Mobs;
 import com.isaiahcreati.creatiintegration.helpers.Utils;
+import com.isaiahcreati.creatiintegration.integration.*;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
-import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -16,7 +17,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.ServerChatEvent;
@@ -47,9 +47,10 @@ public class CreatiIntegration {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
-
+        MinecraftForge.EVENT_BUS.register(new EventHandler());
         // Load config
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
+
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -98,6 +99,7 @@ public class CreatiIntegration {
                                 if (!(payload.details instanceof ItemDetails itemDetails)) break;
                                 Taunts.givePlayerItem(player, itemDetails.itemId, itemDetails.amount);
                                 Item item = Utils.getItemById(itemDetails.itemId);
+
                                 Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 gave you &bx" + itemDetails.amount + " " + item.getDescription().getString());
                                 break;
                             case SPAWN:
@@ -149,6 +151,12 @@ public class CreatiIntegration {
     }
 
     @SubscribeEvent
+    static void setupClient(final FMLClientSetupEvent event) {
+        LOGGER.info("Setting up client...");
+
+    }
+
+    @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Server stopping...");
         if (socket != null) {
@@ -190,6 +198,18 @@ public class CreatiIntegration {
                             socket.emit("join", ALERT_KEY);
                         }
 
+                        return 1;
+                    })
+            );
+            dispatcher.register(Commands.literal("stop")
+                    .requires(source -> source.hasPermission(0))
+                    .executes(context -> {
+                        ServerPlayer player = context.getSource().getPlayerOrException();
+                        if(!socket.isActive()){
+                            player.sendSystemMessage(Component.literal("SocketIO not connected :("));
+                            return 0;
+                        }
+                        socket.close();
                         return 1; // Return 1 to indicate success
                     })
             );

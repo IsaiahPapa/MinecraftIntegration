@@ -1,4 +1,4 @@
-package com.isaiahcreati.creatiintegration;
+package com.isaiahcreati.creatiintegration.integration;
 
 import com.isaiahcreati.creatiintegration.helpers.Utils;
 import com.mojang.logging.LogUtils;

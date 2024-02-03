@@ -1,5 +1,6 @@
 package com.isaiahcreati.creatiintegration.helpers;
 
+import com.isaiahcreati.creatiintegration.Config;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -29,6 +30,8 @@ public final class Chat {
     }
 
     static public void SendAlert(ServerPlayer player, String message){
+        boolean CHAT_ALERTS = Config.CHAT_ALERTS.get();
+        if(!CHAT_ALERTS) return;
         SendMessage(player, "&f[Creati's Bot] &r" + message);
     }
 

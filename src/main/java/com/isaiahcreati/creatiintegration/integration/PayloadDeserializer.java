@@ -1,61 +1,12 @@
-package com.isaiahcreati.creatiintegration;
+package com.isaiahcreati.creatiintegration.integration;
 
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
 
-enum Action {
-    GIVE, TAKE, SPAWN, TAUNT, EFFECT;
-
-    // Optional: Method to convert string to enum
-    public static Action fromString(String action) throws IllegalArgumentException {
-        for (Action a : Action.values()) {
-            if (a.name().equalsIgnoreCase(action)) {
-                return a;
-            }
-        }
-        throw new IllegalArgumentException("No constant with text " + action + " found");
-    }
-}
-
-class Metadata {
-    String streamerName;
-    String redeemerName;
-}
-
-
-class Payload<T> {
-    Action action;
-    T details;
-    Metadata metadata;
-
-}
-
-// Detail classes
-class ItemDetails {
-    String type;
-    String itemId;
-    int amount;
-}
-
-class EffectDetails {
-    String potionId;
-    int amplifier;
-    int duration;
-}
-
-class SpawnDetails {
-    String type;
-    String mobId;
-    int amount;
-}
-
-class TauntDetails {
-    String tauntId;
-}
 
 // Custom deserializer (simplified example)
-class PayloadDeserializer implements JsonDeserializer<Payload> {
+public class PayloadDeserializer implements JsonDeserializer<Payload> {
     @Override
     public Payload deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject jsonObject = json.getAsJsonObject();

@@ -1,4 +1,4 @@
-package com.isaiahcreati.creatiintegration;
+package com.isaiahcreati.creatiintegration.integration;
 
 public class Taunt {
     private String id;
