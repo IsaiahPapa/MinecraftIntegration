@@ -303,7 +303,6 @@ curseforge {
 
         releaseType = 'beta'
         addGameVersion minecraft_version
-        addGameVersion name
 
         addArtifact deobfJar
         addArtifact apiJar
