@@ -74,13 +74,15 @@ public class ConfigScreen extends Screen {
         this.addRenderableWidget(AlertKeyToggle);
 
 
-        Y += 24;
-        this.addRenderableWidget(Button.builder(TEST_BUTTON, (b) -> {
-            LOGGER.info("Pressed: " + b.hashCode());
-        }).bounds(X1, Y, BUTTON_WIDTH, 20).build());
-        this.addRenderableWidget(Button.builder(TEST_BUTTON, (b) -> {
-            LOGGER.info("Pressed: " + b.hashCode());
-        }).bounds(X2, Y, BUTTON_WIDTH, 20).build());
+//        Y += 24;
+//        this.addRenderableWidget(Button.builder(TEST_BUTTON, (b) -> {
+//            LOGGER.info("Pressed: " + b.hashCode());
+//        }).bounds(X1, Y, BUTTON_WIDTH, 20).build());
+//        this.addRenderableWidget(Button.builder(TEST_BUTTON, (b) -> {
+//            LOGGER.info("Pressed: " + b.hashCode());
+//        }).bounds(X2, Y, BUTTON_WIDTH, 20).build());
+
+        
         Y += 48;
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, (p_280845_) -> {
             this.onClose();
