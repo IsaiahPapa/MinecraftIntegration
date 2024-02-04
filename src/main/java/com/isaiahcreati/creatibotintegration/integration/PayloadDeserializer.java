@@ -1,12 +1,12 @@
-package com.isaiahcreati.creatiintegration.integration;
+package com.isaiahcreati.creatibotintegration.integration;
 
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
 
-
 // Custom deserializer (simplified example)
 public class PayloadDeserializer implements JsonDeserializer<Payload> {
+
     @Override
     public Payload deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject jsonObject = json.getAsJsonObject();

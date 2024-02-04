@@ -1,4 +1,4 @@
-package com.isaiahcreati.creatiintegration.helpers;
+package com.isaiahcreati.creatibotintegration.helpers;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

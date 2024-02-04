@@ -1,6 +1,6 @@
-package com.isaiahcreati.creatiintegration.integration;
+package com.isaiahcreati.creatibotintegration.integration;
 
-import com.isaiahcreati.creatiintegration.helpers.Utils;
+import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;

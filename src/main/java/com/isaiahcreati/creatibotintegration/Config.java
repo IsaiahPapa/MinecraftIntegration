@@ -1,13 +1,13 @@
-package com.isaiahcreati.creatiintegration;
+package com.isaiahcreati.creatibotintegration;
 
 import net.minecraftforge.common.ForgeConfigSpec;
-import oshi.util.tuples.Pair;
 
 public class Config {
     public static ForgeConfigSpec.ConfigValue<String> ALERT_KEY;
     public static ForgeConfigSpec.ConfigValue<Boolean> CHAT_ALERTS;
+    public static ForgeConfigSpec.ConfigValue<Boolean> CONNECT_ON_LOAD;
     public static final String CATEGORY_GENERAL = "General";
-    public static final String CATEGORY_CHAT_ALERTS = "Chat Alerts";
+    public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final ForgeConfigSpec CLIENT_CONFIG;
 
     static {
@@ -23,6 +23,7 @@ public class Config {
         CHAT_ALERTS = builder
                 .comment("Do you want any chat alerts to show?")
                 .define("chat_alerts.enabled", true);
+
 
         CLIENT_CONFIG = builder.build();
     }

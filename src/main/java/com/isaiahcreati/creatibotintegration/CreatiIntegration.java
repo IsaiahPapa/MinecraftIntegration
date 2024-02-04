@@ -1,11 +1,11 @@
-package com.isaiahcreati.creatiintegration;
+package com.isaiahcreati.creatibotintegration;
 
 import com.google.gson.*;
-import com.isaiahcreati.creatiintegration.handlers.EventHandler;
-import com.isaiahcreati.creatiintegration.helpers.Chat;
-import com.isaiahcreati.creatiintegration.helpers.Mobs;
-import com.isaiahcreati.creatiintegration.helpers.Utils;
-import com.isaiahcreati.creatiintegration.integration.*;
+import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
+import com.isaiahcreati.creatibotintegration.helpers.Chat;
+import com.isaiahcreati.creatibotintegration.helpers.Mobs;
+import com.isaiahcreati.creatibotintegration.helpers.Utils;
+import com.isaiahcreati.creatibotintegration.integration.*;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -31,12 +31,14 @@ import org.slf4j.Logger;
 
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod(CreatiIntegration.MOD_ID)
+@Mod("creatibotintegration")
 public class CreatiIntegration {
-    public static final String MOD_ID = "creati_integration";
     public static final Logger LOGGER = LogUtils.getLogger();
     public static Socket socket;
+    private int reconnectAttempts = 0;
+
     private final Taunts taunts = new Taunts();
+
 
     public CreatiIntegration() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -44,7 +46,6 @@ public class CreatiIntegration {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
-
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -67,8 +68,32 @@ public class CreatiIntegration {
             }
 
             socket = IO.socket(url);
+
             socket.on(Socket.EVENT_CONNECT, args -> {
-                LOGGER.info("Connected to WebSocket");
+                reconnectAttempts = 0;
+                LOGGER.info("Connected to SocketIO");
+            });
+            socket.on(Socket.EVENT_DISCONNECT, args -> {
+                LOGGER.info("Disconnected from SocketIO");
+                for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                    Chat.SendMessage(player, "Disconnected from Server, attempting to reconnect");
+                }
+            });
+            socket.on(Socket.EVENT_CONNECT_ERROR, args -> {
+                LOGGER.info("Failed to connect to server");
+                reconnectAttempts++;
+                if(reconnectAttempts >= 5){
+                    reconnectAttempts = 0;
+                    socket.disconnect();
+                    LOGGER.info("Failed to connect to server. Please try again later.");
+                    for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                        Chat.SendMessage(player, "Failed to connect to server. Please try again later");
+                    }
+                    return;
+                }
+                for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                    Chat.SendMessage(player, "Failed to connect to Creati's Inegration Server. Attempt #" + reconnectAttempts);
+                }
             });
 
             socket.on("sys", args -> {
@@ -135,9 +160,6 @@ public class CreatiIntegration {
                     e.printStackTrace();
                 }
             });
-
-            socket.on(Socket.EVENT_DISCONNECT, args -> LOGGER.info("Disconnected from WebSocket"));
-            socket.connect();
         } catch (Exception e) {
             LOGGER.error("Something errored in SocketIO", e);
             e.printStackTrace();
@@ -166,7 +188,6 @@ public class CreatiIntegration {
 
         // Create the join message
         String joinMessage = playerName + " has joined the server! Welcome!";
-        event.getEntity().getServer().getPlayerList().broadcastSystemMessage(Component.literal(joinMessage), false);
     }
 
     @SubscribeEvent

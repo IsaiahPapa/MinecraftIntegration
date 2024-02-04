@@ -1,4 +1,4 @@
-package com.isaiahcreati.creatiintegration.integration;
+package com.isaiahcreati.creatibotintegration.integration;
 
 
 

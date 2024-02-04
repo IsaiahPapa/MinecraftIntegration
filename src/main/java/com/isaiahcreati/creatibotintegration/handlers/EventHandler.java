@@ -1,6 +1,7 @@
-package com.isaiahcreati.creatiintegration.handlers;
+package com.isaiahcreati.creatibotintegration.handlers;
 
-import com.isaiahcreati.creatiintegration.screens.ConfigScreen;
+import com.isaiahcreati.creatibotintegration.Config;
+import com.isaiahcreati.creatibotintegration.screens.ConfigScreen;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -18,6 +19,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 
 import java.util.Optional;
+import java.util.UUID;
 
 
 @Mod.EventBusSubscriber(value = Dist.CLIENT)
@@ -56,17 +58,31 @@ public class EventHandler {
     {
         if(shown) return;
         if (!(event.getEntity() instanceof Player player)) return;
-        if (!event.getLevel().isClientSide() || this.isConfigSetup()) return;
-
-        Component message = Component.literal("[Warning] Creati's Integration not configured!")
-                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55")));
+        if (!event.getLevel().isClientSide()) return;
+        Component message;
+        if(this.isConfigSetup()){
+            message = Component.literal("[Creati's Integration] Welcome! Start receiving alerts with /start & /stop")
+                    .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF")));
+        }else{
+            message = Component.literal("[Warning] Creati's Integration not configured!")
+                    .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55")));
+        }
         player.sendSystemMessage(message);
 
         shown = true;
     }
 
-    private boolean isConfigSetup() {
-        return false;
+    static public boolean isConfigSetup() {
+        String alertKey = Config.ALERT_KEY.get();
+
+        try {
+            UUID id = UUID.fromString(alertKey);
+            return true;
+        } catch (IllegalArgumentException e) {
+            // The string is not a valid UUID
+            return false;
+        }
     }
+
 
 }

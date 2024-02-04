@@ -1,13 +1,10 @@
-package com.isaiahcreati.creatiintegration.helpers;
+package com.isaiahcreati.creatibotintegration.helpers;
 
-import com.isaiahcreati.creatiintegration.Config;
+import com.isaiahcreati.creatibotintegration.Config;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.ServerLifecycleHooks;
-
-import static java.util.Collections.nCopies;
-import static org.openjdk.nashorn.internal.objects.NativeArray.join;
 
 public final class Chat {
 

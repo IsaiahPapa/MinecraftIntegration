@@ -1,4 +1,4 @@
-package com.isaiahcreati.creatiintegration.helpers;
+package com.isaiahcreati.creatibotintegration.helpers;
 
 import com.google.gson.JsonArray;
 import com.mojang.logging.LogUtils;

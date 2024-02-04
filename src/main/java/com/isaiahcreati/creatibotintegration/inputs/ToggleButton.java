@@ -1,5 +1,6 @@
-package com.isaiahcreati.creatiintegration.inputs;
+package com.isaiahcreati.creatibotintegration.inputs;
 
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
@@ -13,6 +14,11 @@ public class ToggleButton extends Button {
         this.toggled = initialState;
         this.onText = onText;
         this.offText = offText;
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int x, int y, float p_93660_) {
+        super.render(guiGraphics, x, y, p_93660_);
     }
 
     public boolean isToggled() {
