@@ -55,7 +55,6 @@ public class ConfigScreen extends Screen {
         uuidTextField.setValue(actualText); // Set the current UUID from the config
         uuidTextField.setEditable(isTextEditable);
         uuidTextField.setResponder(newText -> {
-            LOGGER.info("IS editeable:" + isTextEditable + ", newText: " + newText);
             if (!isTextEditable) return;
             actualText = newText;
         });
@@ -64,17 +63,13 @@ public class ConfigScreen extends Screen {
         ToggleButton AlertKeyToggle = new ToggleButton(X2 + (BUTTON_WIDTH - 60), Y, 60, 20, Component.literal("Show"), Component.literal("Hide"), isTextEditable, b -> {
             if (isTextEditable) {
                 isTextEditable = false;
-                // Hide the text
                 actualText = uuidTextField.getValue(); // Update actualText with the current value
                 uuidTextField.setValue("********-****-****-****-************");
 
             } else {
                 isTextEditable = true;
-                // Show the actual text
                 uuidTextField.setValue(actualText);
-
             }
-
         }, Supplier::get);
         this.addRenderableWidget(AlertKeyToggle);
 
@@ -102,15 +97,14 @@ public class ConfigScreen extends Screen {
     @Override
     public void onClose() {
         this.save();
-
         this.minecraft.setScreen(this.lastScreen);
     }
 
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics); // This is typically called to render the default background
-        super.render(guiGraphics, mouseX, mouseY, partialTick); // Call the super method to render buttons and other elements
+        this.renderBackground(guiGraphics);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         //Draw title
         guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 16777215);
