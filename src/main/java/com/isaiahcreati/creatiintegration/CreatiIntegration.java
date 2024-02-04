@@ -6,19 +6,15 @@ import com.isaiahcreati.creatiintegration.helpers.Chat;
 import com.isaiahcreati.creatiintegration.helpers.Mobs;
 import com.isaiahcreati.creatiintegration.helpers.Utils;
 import com.isaiahcreati.creatiintegration.integration.*;
-import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -39,8 +35,7 @@ import org.slf4j.Logger;
 public class CreatiIntegration {
     public static final String MOD_ID = "creati_integration";
     public static final Logger LOGGER = LogUtils.getLogger();
-    private static Socket socket;
-
+    public static Socket socket;
     private final Taunts taunts = new Taunts();
 
     public CreatiIntegration() {
@@ -48,7 +43,6 @@ public class CreatiIntegration {
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
-        // Load config
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
 
     }
@@ -173,48 +167,6 @@ public class CreatiIntegration {
         // Create the join message
         String joinMessage = playerName + " has joined the server! Welcome!";
         event.getEntity().getServer().getPlayerList().broadcastSystemMessage(Component.literal(joinMessage), false);
-    }
-
-    @Mod.EventBusSubscriber
-    public class CommandRegistration {
-
-        @SubscribeEvent
-        public static void onCommandsRegister(RegisterCommandsEvent event) {
-            CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
-
-            dispatcher.register(Commands.literal("start")
-                    .requires(source -> source.hasPermission(0))
-                    .executes(context -> {
-                        ServerPlayer player = context.getSource().getPlayerOrException();
-                        if(!socket.isActive()){
-                            player.sendSystemMessage(Component.literal("SocketIO not connected :("));
-                            return 0;
-                        }
-
-                        String ALERT_KEY = Config.ALERT_KEY.get();
-                        if(!ALERT_KEY.isEmpty()){
-                            Chat.SendMessage(player, "Starting game session...");
-                            Chat.SendMessage(player, "Key: " + ALERT_KEY);
-                            socket.emit("join", ALERT_KEY);
-                        }
-
-                        return 1;
-                    })
-            );
-            dispatcher.register(Commands.literal("stop")
-                    .requires(source -> source.hasPermission(0))
-                    .executes(context -> {
-                        ServerPlayer player = context.getSource().getPlayerOrException();
-                        if(!socket.isActive()){
-                            player.sendSystemMessage(Component.literal("SocketIO not connected :("));
-                            return 0;
-                        }
-                        socket.close();
-                        return 1; // Return 1 to indicate success
-                    })
-            );
-        }
-
     }
 
     @SubscribeEvent
