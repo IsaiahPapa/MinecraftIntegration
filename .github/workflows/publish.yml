@@ -32,11 +32,14 @@ jobs:
       - name: "Run Gradle Publish"
         run: ./gradlew publish
 
+      - name: "Extract mod version"
+        run: echo "MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)" >> $GITHUB_ENV
+
       - name: "Create GitHub Release"
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
+          name: "Release v${{ env.MOD_VERSION }}"
+          tag_name: "${{ env.MOD_VERSION }}"
           draft: true
           prerelease: false
           files: |
