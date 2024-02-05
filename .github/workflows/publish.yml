@@ -2,8 +2,8 @@ name: Publish pipeline
 
 on:
   push:
-    tags:
-      - *
+#    tags:
+#      - v*
 
 jobs:
   build:
