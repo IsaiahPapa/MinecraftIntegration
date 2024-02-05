@@ -300,8 +300,8 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             artifact jar
-            artifact deobfJar
-            artifact apiJar
+//            artifact deobfJar
+//            artifact apiJar
 
             groupId mod_group_id
             artifactId = "${mod_id}-Forge"
@@ -333,11 +333,15 @@ curseforge {
         releaseType = 'beta'
         addGameVersion minecraft_version
 
-        mainArtifact(jar) {
+        mainArtifact(shadowJar) {
             displayName = "[Forge] ${mod_name} ${minecraft_version} ${version}"
         }
 
     }
+}
+
+tasks.named('curseforge').configure {
+    dependsOn shadowJar
 }
 
 tasks.withType(JavaCompile).configureEach {
