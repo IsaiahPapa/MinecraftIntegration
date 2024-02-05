@@ -1,14 +1,14 @@
-name: Publish
+name: Publish pipeline
+
 on:
   workflow_dispatch:
   push:
-permissions:
-  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: "Checkout"
@@ -16,35 +16,41 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-      - name: Set up JDK 17
+
+      - name: "Set up JDK 17"
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'oracle'
           server-id: github
           settings-path: ${{ github.workspace }}
-      - name: Setup Gradle
+
+      - name: "Setup Gradle"
         uses: gradle/gradle-build-action@v2
-      # Removed Gradle Publish Step
-      - name: CurseForge Publish
-        run: ./gradlew curseforge -PcurseApiKey=${CURSE_API_KEY}
-        env:
-          CURSE_API_KEY: ${{ secrets.CURSE_API_KEY }}
-          BUILD_NUMBER: ${{ github.run_number }}
-        continue-on-error: true
+
+      - name: "Run Gradle Publish"
+        run: ./gradlew publish
+
+      - name: "Create GitHub Release"
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          prerelease: false
+          files: |
+            releases/*
+      #Validated works 2/04/24
+#      - name: CurseForge Publish
+#        run: ./gradlew curseforge -PcurseApiKey=${CURSE_API_KEY}
+#        env:
+#          CURSE_API_KEY: ${{ secrets.CURSE_API_KEY }}
+#          BUILD_NUMBER: ${{ github.run_number }}
+#        continue-on-error: true
+# TODO: Make this work, also make the Modrinth repo
 #      - name: Modrinth Publish
 #        run: ./gradlew modrinth -PmodrinthToken=${MODRINTH_TOKEN}
 #        env:
 #          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 #          BUILD_NUMBER: ${{ github.run_number }}
 #        continue-on-error: true
-#      - name: Create GitHub Release
-#        id: create_release
-#        uses: actions/create-release@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          tag_name: ${{ github.ref }}
-#          release_name: Release ${{ github.ref }}
-#          draft: false
-#          prerelease: false
