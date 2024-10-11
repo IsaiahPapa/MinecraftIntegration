@@ -39,6 +39,8 @@ public class CreatiIntegration {
 
     private final Taunts taunts = new Taunts();
 
+    public static String SocketConnectionUri;
+
 
     public CreatiIntegration() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -46,6 +48,13 @@ public class CreatiIntegration {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
+
+
+        if (isDevelopmentEnvironment()) {
+            SocketConnectionUri = "ws://127.0.0.1:8006/integration";
+        } else {
+            SocketConnectionUri = "wss://alerts.isaiahcreati.com/integration";
+        }
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -60,14 +69,7 @@ public class CreatiIntegration {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         try {
-            String url;
-            if (isDevelopmentEnvironment()) {
-                url = "ws://127.0.0.1:8006/integration";
-            } else {
-                url = "wss://alerts.isaiahcreati.com/integration";
-            }
-
-            socket = IO.socket(url);
+            socket = IO.socket(SocketConnectionUri);
 
             socket.on(Socket.EVENT_CONNECT, args -> {
                 reconnectAttempts = 0;

@@ -1,6 +1,7 @@
 package com.isaiahcreati.creatibotintegration.helpers;
 
 import com.isaiahcreati.creatibotintegration.Config;
+import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.mojang.brigadier.CommandDispatcher;
 import io.socket.client.Socket;
@@ -12,8 +13,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import static com.isaiahcreati.creatibotintegration.CreatiIntegration.LOGGER;
-import static com.isaiahcreati.creatibotintegration.CreatiIntegration.socket;
+import static com.isaiahcreati.creatibotintegration.CreatiIntegration.*;
 
 @Mod.EventBusSubscriber
 public class ModCommands {
@@ -35,6 +35,7 @@ public class ModCommands {
                     String ALERT_KEY = Config.ALERT_KEY.get();
                     Chat.SendMessage(player, "Starting game session...");
                     Chat.SendMessage(player, "Key: " + ALERT_KEY);
+                    Chat.SendMessage(player, "URL: " + SocketConnectionUri);
                     socket.connect();
                     socket.on(Socket.EVENT_CONNECT, args -> {
                         socket.emit("join", ALERT_KEY);

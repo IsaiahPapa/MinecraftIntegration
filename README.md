@@ -1,6 +1,8 @@
-# Creati's Bot Minecraft Integration
 
+# Creati's Bot Minecraft Integration
 This repository contains the source code for a Minecraft Forge mod that enhances gameplay with various features, including custom command integration, entity spawning, and more. The mod is designed to work with Minecraft Forge, offering a range of functionalities to enrich the Minecraft experience.
+
+[![](http://cf.way2muchnoise.eu/full_970500_downloads.svg)](https://www.curseforge.com/minecraft/mc-mods/creatis-bot-integration)
 
 ## Features
 
@@ -27,10 +29,6 @@ The mod introduces several commands and features. For detailed usage and command
 ## Contributing
 
 Contributions to this project are welcome! If you have suggestions for improvements or encounter any issues, please feel free to open an issue or submit a pull request.
-
-## License
-
-This project is licensed under [specify your license] - see the LICENSE file for details.
 
 ## Acknowledgments
 
