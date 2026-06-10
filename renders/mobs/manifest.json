@@ -1,0 +1,221 @@
+{
+  "axolotl": {
+    "error": "Timeout"
+  },
+  "bat": {
+    "b64": "data:image/png;base64,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",
+    "modelPath": "bat",
+    "settingsHash": "51270f74148bd7169d598efd4170347c",
+    "renderedAt": "2026-04-12T22:55:04.779Z"
+  },
+  "bee": {
+    "error": "MineRender not loaded"
+  },
+  "blaze": {
+    "error": "MineRender not loaded"
+  },
+  "cat": {
+    "error": "MineRender not loaded"
+  },
+  "cave_spider": {
+    "error": "MineRender not loaded"
+  },
+  "chicken": {
+    "error": "MineRender not loaded"
+  },
+  "cod": {
+    "error": "MineRender not loaded"
+  },
+  "cow": {
+    "error": "MineRender not loaded"
+  },
+  "creeper": {
+    "error": "Timeout"
+  },
+  "dolphin": {
+    "error": "MineRender not loaded"
+  },
+  "donkey": {
+    "error": "MineRender not loaded"
+  },
+  "drowned": {
+    "error": "MineRender not loaded"
+  },
+  "elder_guardian": {
+    "error": "MineRender not loaded"
+  },
+  "enderman": {
+    "error": "MineRender not loaded"
+  },
+  "enderdragon": {
+    "error": "MineRender not loaded"
+  },
+  "evoker": {
+    "error": "MineRender not loaded"
+  },
+  "fox": {
+    "error": "MineRender not loaded"
+  },
+  "frog": {
+    "error": "MineRender not loaded"
+  },
+  "ghast": {
+    "error": "MineRender not loaded"
+  },
+  "giant": {
+    "error": "MineRender not loaded"
+  },
+  "glow_squid": {
+    "error": "MineRender not loaded"
+  },
+  "goat": {
+    "error": "MineRender not loaded"
+  },
+  "guardian": {
+    "error": "MineRender not loaded"
+  },
+  "hoglin": {
+    "error": "MineRender not loaded"
+  },
+  "horse": {
+    "error": "MineRender not loaded"
+  },
+  "husk": {
+    "error": "MineRender not loaded"
+  },
+  "illusioner": {
+    "error": "MineRender not loaded"
+  },
+  "iron_golem": {
+    "error": "MineRender not loaded"
+  },
+  "llama": {
+    "error": "MineRender not loaded"
+  },
+  "magma_cube": {
+    "error": "MineRender not loaded"
+  },
+  "mooshroom": {
+    "error": "MineRender not loaded"
+  },
+  "mule": {
+    "error": "MineRender not loaded"
+  },
+  "ocelot": {
+    "error": "MineRender not loaded"
+  },
+  "panda": {
+    "error": "MineRender not loaded"
+  },
+  "parrot": {
+    "error": "MineRender not loaded"
+  },
+  "phantom": {
+    "error": "MineRender not loaded"
+  },
+  "pig": {
+    "error": "MineRender not loaded"
+  },
+  "piglin": {
+    "error": "MineRender not loaded"
+  },
+  "piglin_brute": {
+    "error": "MineRender not loaded"
+  },
+  "pillager": {
+    "error": "MineRender not loaded"
+  },
+  "polar_bear": {
+    "error": "MineRender not loaded"
+  },
+  "pufferfish": {
+    "error": "MineRender not loaded"
+  },
+  "rabbit": {
+    "error": "MineRender not loaded"
+  },
+  "ravager": {
+    "error": "MineRender not loaded"
+  },
+  "salmon": {
+    "error": "MineRender not loaded"
+  },
+  "sheep": {
+    "error": "MineRender not loaded"
+  },
+  "shulker": {
+    "error": "MineRender not loaded"
+  },
+  "silverfish": {
+    "error": "MineRender not loaded"
+  },
+  "skeleton": {
+    "error": "MineRender not loaded"
+  },
+  "skeleton_horse": {
+    "error": "MineRender not loaded"
+  },
+  "slime": {
+    "error": "MineRender not loaded"
+  },
+  "snow_golem": {
+    "error": "MineRender not loaded"
+  },
+  "spider": {
+    "error": "MineRender not loaded"
+  },
+  "squid": {
+    "error": "MineRender not loaded"
+  },
+  "stray": {
+    "error": "MineRender not loaded"
+  },
+  "strider": {
+    "error": "MineRender not loaded"
+  },
+  "trader_llama": {
+    "error": "MineRender not loaded"
+  },
+  "tropical_fish": {
+    "error": "MineRender not loaded"
+  },
+  "turtle": {
+    "error": "MineRender not loaded"
+  },
+  "vex": {
+    "error": "MineRender not loaded"
+  },
+  "villager": {
+    "error": "MineRender not loaded"
+  },
+  "vindicator": {
+    "error": "MineRender not loaded"
+  },
+  "wandering_trader": {
+    "error": "MineRender not loaded"
+  },
+  "witch": {
+    "error": "MineRender not loaded"
+  },
+  "wither_skeleton": {
+    "error": "MineRender not loaded"
+  },
+  "wolf": {
+    "error": "MineRender not loaded"
+  },
+  "zoglin": {
+    "error": "MineRender not loaded"
+  },
+  "zombie": {
+    "error": "MineRender not loaded"
+  },
+  "zombie_horse": {
+    "error": "MineRender not loaded"
+  },
+  "zombie_villager": {
+    "error": "MineRender not loaded"
+  },
+  "zombified_piglin": {
+    "error": "MineRender not loaded"
+  }
+}

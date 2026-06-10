@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Data Viewer</title>
+    <style>
+        .server-hint { background: #2d2d44; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+        .server-hint code { background: #1a1a2e; padding: 4px 8px; border-radius: 4px; color: #4ade80; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 20px; color: #4ade80; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 12px 24px; background: #2d2d44; border: none; border-radius: 8px; color: #aaa; cursor: pointer; font-size: 16px; transition: all 0.2s; }
+        .tab:hover { background: #3d3d5c; }
+        .tab.active { background: #4ade80; color: #1a1a2e; font-weight: bold; }
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat { background: #2d2d44; padding: 15px 25px; border-radius: 8px; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #4ade80; }
+        .stat-label { font-size: 12px; color: #888; text-transform: uppercase; }
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+        .filters label { color: #888; }
+        .filters select { padding: 8px 12px; background: #2d2d44; border: 1px solid #444; border-radius: 6px; color: #eee; }
+        .filters input[type="text"] { padding: 8px 12px; background: #2d2d44; border: 1px solid #444; border-radius: 6px; color: #eee; width: 200px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .card { background: #2d2d44; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; align-items: center; border: 2px solid transparent; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-3px); }
+        .card.placeholder { border-color: #f59e0b; }
+        .card.no-icon { border-color: #ef4444; }
+        .card-icon { width: 64px; height: 64px; object-fit: contain; margin-bottom: 10px; background: #1a1a2e; border-radius: 8px; padding: 4px; }
+        .card-icon.placeholder { border: 2px dashed #f59e0b; }
+        .card-name { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 4px; color: #fff; }
+        .card-display { font-size: 11px; color: #888; text-align: center; margin-bottom: 8px; }
+        .card-meta { font-size: 10px; color: #666; text-align: center; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; margin-top: 5px; }
+        .badge-real { background: #22c55e; color: #1a1a2e; }
+        .badge-placeholder { background: #f59e0b; color: #1a1a2e; }
+        .badge-missing { background: #ef4444; color: #fff; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .placeholder-icon { filter: sepia(1) hue-rotate(-50deg) saturate(3); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Minecraft Data Viewer</h1>
+        
+        <div class="server-hint">
+            <p>To view this page, run a local server in the project directory:</p>
+            <p><code>npx serve</code> or <code>python3 -m http.server</code></p>
+            <p>Then open <code>http://localhost:3000/viewer.html</code></p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" data-section="mobs">Mobs</button>
+            <button class="tab" data-section="items">Items</button>
+            <button class="tab" data-section="effects">Effects</button>
+            <button class="tab" data-section="blocks">Blocks</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat"><span class="stat-value" id="total-count">-</span><br><span class="stat-label">Total</span></div>
+            <div class="stat"><span class="stat-value" id="real-count">-</span><br><span class="stat-label">Real Icons</span></div>
+            <div class="stat"><span class="stat-value" id="placeholder-count">-</span><br><span class="stat-label">Placeholders</span></div>
+            <div class="stat"><span class="stat-value" id="missing-count">-</span><br><span class="stat-label">No Icon</span></div>
+        </div>
+        
+        <div class="filters">
+            <label>Show:</label>
+            <select id="filter-type">
+                <option value="all">All</option>
+                <option value="real">Real Icons Only</option>
+                <option value="placeholder">Placeholders Only</option>
+                <option value="missing">No Icon Only</option>
+            </select>
+            <label>Search:</label>
+            <input type="text" id="search" placeholder="Filter by name...">
+        </div>
+        
+        <div class="grid" id="grid"></div>
+    </div>
+    
+    <script>
+        const UNKNOWN_SERVER_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9bpSIVBzuIOGSoThZERRylikWwUNoqCq28FBy1CkWoEGqFVh1MLv2CJg1Jiouj4Fpw8GOx6uDirKuDqyAIfoA4PTVNQfD7e787370HPYfKqtwUzw5QQl8zzh5i1GE0dxT3EWSQRRb2R7j+hp8dPsbzR7g0j7mZ8wI/Q3x3iJ1o7R8W7u0l7kWILh4m7j3K6WvM3sPsa4xYq0p9WcW0q4iZqH6m0n+3W3uJ9U7E6n8g2e4xZq3xW6xJ3pW8dY2YqP7Xc4L9b6L4XgXb3p1r7qR2K1t1i7pW+9Q5w5k3WqO1xVvC0W3cD/1YV+hP73f7aU3w5x2N4aM/xh0M8p4n1P2N9R3i7pW+9A1x5k3W2ONcV6p+4B1e8d2Jf3H9fM//rZ4q8z4R6t4v3P+Ofv8p/z7v7L2d0u/P9d9r+7b9/uf8+5/zb3/u7v3N6/27e/e/f//e+/+O+d9f7t7/t3P+d2f/757z/3X2/+65/1/n/O+d8791/vfO+d86539z/vfW+d86539z/vfW+d86539z/vfW+d865393/vfe+f975//v/P+d8791/vfO+d86539z/vfW+d86539z/vfW+d865393/vfe+f973/nfP+d875/5/z/nfO/d/7/z/nfO/d/7/z/nfO/d/7/z/nfO/d/7/z/nfP+d875/z/nfP+d875/z/nfO/d/7/zvnfe+f/75z/vXP+98753zvnf++c/71z/vfO+d865393/vfe+f/33vnfO+d/75z/vXP+98753zvnf++c/71z/vfO+d8753/vnP+9c/73zvnfe+f/753/v3P+9875/3vn/+9dALB3AcHABRjLAAAAAElFTkSuQmCC';
+        
+        let currentSection = 'mobs';
+        let allData = { mobs: [], items: [], effects: [], blocks: [] };
+        
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                currentSection = tab.dataset.section;
+                renderGrid();
+            });
+        });
+        
+        document.getElementById('filter-type').addEventListener('change', renderGrid);
+        document.getElementById('search').addEventListener('input', renderGrid);
+        
+        function isPlaceholder(b64) {
+            return b64 === UNKNOWN_SERVER_B64;
+        }
+        
+        function getIconHtml(item) {
+            const placeholder = isPlaceholder(item.iconB64);
+            const imgClass = placeholder ? 'card-icon placeholder-icon' : 'card-icon';
+            const imgSrc = item.iconB64 ? `data:image/png;base64,${item.iconB64}` : '';
+            
+            if (!item.iconB64) {
+                return `<div class="card-icon" style="background:#333;display:flex;align-items:center;justify-content:center;color:#ef4444;font-size:24px;">?</div>`;
+            }
+            return `<img class="${imgClass}" src="${imgSrc}" alt="${item.displayName || item.name}">`;
+        }
+        
+        function getBadge(item) {
+            if (!item.iconB64) return '<span class="badge badge-missing">NO ICON</span>';
+            if (isPlaceholder(item.iconB64)) return '<span class="badge badge-placeholder">PLACEHOLDER</span>';
+            return '<span class="badge badge-real">REAL</span>';
+        }
+        
+        function getCardClass(item) {
+            if (!item.iconB64) return 'card no-icon';
+            if (isPlaceholder(item.iconB64)) return 'card placeholder';
+            return 'card';
+        }
+        
+        function getCategory(item) {
+            if (item.category) return item.category;
+            if (item.stackSize !== undefined) return `Stack: ${item.stackSize}`;
+            return '';
+        }
+        
+        function renderGrid() {
+            const filter = document.getElementById('filter-type').value;
+            const search = document.getElementById('search').value.toLowerCase();
+            const data = allData[currentSection];
+            
+            let filtered = data.filter(item => {
+                const name = (item.displayName || item.name || '').toLowerCase();
+                const matchesSearch = name.includes(search) || (item.name || '').toLowerCase().includes(search);
+                
+                if (filter === 'all') return matchesSearch;
+                if (filter === 'real') return matchesSearch && item.iconB64 && !isPlaceholder(item.iconB64);
+                if (filter === 'placeholder') return matchesSearch && item.iconB64 && isPlaceholder(item.iconB64);
+                if (filter === 'missing') return matchesSearch && !item.iconB64;
+                return matchesSearch;
+            });
+            
+            let realCount = 0, placeholderCount = 0, missingCount = 0;
+            data.forEach(item => {
+                if (!item.iconB64) missingCount++;
+                else if (isPlaceholder(item.iconB64)) placeholderCount++;
+                else realCount++;
+            });
+            
+            document.getElementById('total-count').textContent = data.length;
+            document.getElementById('real-count').textContent = realCount;
+            document.getElementById('placeholder-count').textContent = placeholderCount;
+            document.getElementById('missing-count').textContent = missingCount;
+            
+            const grid = document.getElementById('grid');
+            grid.innerHTML = filtered.map(item => `
+                <div class="${getCardClass(item)}">
+                    ${getIconHtml(item)}
+                    <div class="card-name">${item.name}</div>
+                    <div class="card-display">${item.displayName || '-'}</div>
+                    <div class="card-meta">${getCategory(item)}</div>
+                    ${getBadge(item)}
+                </div>
+            `).join('');
+        }
+        
+        async function loadData() {
+            try {
+                const [mobs, items, effects, blocks] = await Promise.all([
+                    fetch('./data/mobs.json').then(r => r.json()),
+                    fetch('./data/items.json').then(r => r.json()),
+                    fetch('./data/effects.json').then(r => r.json()),
+                    fetch('./data/blocks.json').then(r => r.json())
+                ]);
+                allData = { mobs, items, effects, blocks };
+                document.querySelector('.server-hint').style.display = 'none';
+                renderGrid();
+            } catch (err) {
+                document.getElementById('grid').innerHTML = `<p style="color:#ef4444;grid-column:1/-1;text-align:center;">Error loading data: ${err.message}<br><br>Make sure you're running a local server (see instructions above)</p>`;
+            }
+        }
+        
+        loadData();
+    </script>
+</body>
+</html>

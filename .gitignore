@@ -27,3 +27,15 @@ forge*changelog.txt
 #building
 output
 releases
+
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# generated data (only local)
+/data
+/extracted-textures
+/public
+/vendor

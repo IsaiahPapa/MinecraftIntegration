@@ -1,0 +1,16 @@
+{
+  "name": "minecraft-data-generator",
+  "version": "1.0.0",
+  "description": "Generate Minecraft items, mobs, effects, and blocks JSON with icons",
+  "type": "module",
+  "main": "scripts/generate-minecraft-data.js",
+  "scripts": {
+    "generate": "node scripts/generate-minecraft-data.js",
+    "render-mobs": "node scripts/render-mob-heads.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "minecraft-data": "^3.109.0",
+    "puppeteer": "^21.11.0"
+  }
+}
