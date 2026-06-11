@@ -1,31 +1,32 @@
 package com.isaiahcreati.creatibotintegration.client;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import com.isaiahcreati.creatibotintegration.CreatiIntegration;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
 
-@Mod.EventBusSubscriber(modid = com.isaiahcreati.creatibotintegration.CreatiIntegration.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = CreatiIntegration.MODID, value = Dist.CLIENT)
 public class ClientEventHandler {
 
     @SubscribeEvent
-    public static void onComputeFov(ViewportEvent.ComputeFov event) {
+    public static void onComputeFov(ComputeFovModifierEvent event) {
         if (ClientEffectState.fovOverride != 0f) {
-            event.setFOV(ClientEffectState.fovOverride);
+            event.setNewFovModifier(event.getFovModifier() * (ClientEffectState.fovOverride / 70f));
         }
+    }
+
+    @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        ClientEffectManager.tick();
     }
 
     @SubscribeEvent
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {
-        if (ClientEffectState.cameraRoll != 0f) {
+        if (ClientEffectState.cameraRollExpiryTick > 0) {
             event.setRoll(ClientEffectState.cameraRoll);
         }
-    }
-
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        ClientEffectManager.tick();
     }
 }

@@ -1,28 +1,29 @@
 package com.isaiahcreati.creatibotintegration;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class Config {
-    public static ForgeConfigSpec.ConfigValue<String> ALERT_KEY;
-    public static ForgeConfigSpec.ConfigValue<Boolean> CHAT_ALERTS;
-    public static ForgeConfigSpec.ConfigValue<Boolean> PARKOUR_ENABLED;
-    public static ForgeConfigSpec.ConfigValue<Integer> PARKOUR_DURATION_SECONDS;
-    public static ForgeConfigSpec.ConfigValue<Integer> PARKOUR_FAIL_DAMAGE;
-    public static ForgeConfigSpec.ConfigValue<Boolean> TNT_RUN_ENABLED;
-    public static ForgeConfigSpec.ConfigValue<Integer> TNT_RUN_DURATION_SECONDS;
-    public static ForgeConfigSpec.ConfigValue<Integer> TNT_RUN_FAIL_DAMAGE;
-    public static ForgeConfigSpec.ConfigValue<Integer> TNT_RUN_DECAY_DELAY_TICKS;
-    public static ForgeConfigSpec.ConfigValue<Integer> TNT_RUN_GRACE_PERIOD_SECONDS;
-    public static ForgeConfigSpec.ConfigValue<Boolean> DROPPER_ENABLED;
-    public static ForgeConfigSpec.ConfigValue<Integer> DROPPER_FAIL_DAMAGE;
-    public static ForgeConfigSpec.IntValue CONFIG_VERSION;
+    public static final ModConfigSpec CLIENT_CONFIG;
+
+    public static final ModConfigSpec.ConfigValue<String> ALERT_KEY;
+    public static final ModConfigSpec.ConfigValue<Boolean> CHAT_ALERTS;
+    public static final ModConfigSpec.ConfigValue<Boolean> PARKOUR_ENABLED;
+    public static final ModConfigSpec.ConfigValue<Integer> PARKOUR_DURATION_SECONDS;
+    public static final ModConfigSpec.ConfigValue<Integer> PARKOUR_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Boolean> TNT_RUN_ENABLED;
+    public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_DURATION_SECONDS;
+    public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_DECAY_DELAY_TICKS;
+    public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_GRACE_PERIOD_SECONDS;
+    public static final ModConfigSpec.ConfigValue<Boolean> DROPPER_ENABLED;
+    public static final ModConfigSpec.ConfigValue<Integer> DROPPER_FAIL_DAMAGE;
+    public static final ModConfigSpec.IntValue CONFIG_VERSION;
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
-    public static final ForgeConfigSpec CLIENT_CONFIG;
     public static final int CURRENT_CONFIG_VERSION = 3;
 
     static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("General Settings").push(CATEGORY_GENERAL);
 
         CONFIG_VERSION = builder

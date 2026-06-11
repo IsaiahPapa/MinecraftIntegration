@@ -52,12 +52,12 @@ public class TntRunMinigame extends Minigame {
 
     @Override
     public Component getTitle() {
-        return Component.literal("TNT Run").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555")).withBold(true));
+        return Component.literal("TNT Run").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow()).withBold(true));
     }
 
     @Override
     public Component getSubtitle() {
-        return Component.literal("Survive for " + getDurationSeconds() + " seconds!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF")));
+        return Component.literal("Survive for " + getDurationSeconds() + " seconds!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF").getOrThrow()));
     }
 
     @Override
@@ -97,7 +97,7 @@ public class TntRunMinigame extends Minigame {
 
         player.connection.send(new ClientboundSetTitlesAnimationPacket(5, 15, 5));
         player.connection.send(new ClientboundSetTitleTextPacket(
-                Component.literal(text).setStyle(Style.EMPTY.withColor(TextColor.parseColor(colorHex)).withBold(true))
+                Component.literal(text).setStyle(Style.EMPTY.withColor(TextColor.parseColor(colorHex).getOrThrow()).withBold(true))
         ));
 
         if (secondsRemaining <= 0) {
@@ -135,7 +135,7 @@ public class TntRunMinigame extends Minigame {
     public void onTick(ServerPlayer player, long currentTick, long elapsedTicks) {
         if (!MinigameDimension.isMinigameDimension(player.level())) return;
 
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos standingOn = player.getOnPos();
 
         int cx = standingOn.getX();

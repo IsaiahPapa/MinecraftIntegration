@@ -2,28 +2,22 @@ package com.isaiahcreati.creatibotintegration.mixin;
 
 import com.isaiahcreati.creatibotintegration.client.ClientEffectState;
 import net.minecraft.client.player.KeyboardInput;
+import net.minecraft.world.entity.player.Input;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(KeyboardInput.class)
 public class KeyboardInputMixin {
 
-    @Inject(method = "tick", at = @At("TAIL"))
-    private void onTick(boolean sneaking, float sneakSpeed, CallbackInfo ci) {
+    @Redirect(
+        method = "tick",
+        at = @At(value = "NEW", target = "(ZZZZZZZ)Lnet/minecraft/world/entity/player/Input;")
+    )
+    private Input invertInput(boolean forward, boolean backward, boolean left, boolean right, boolean jump, boolean shift, boolean sprint) {
         if (ClientEffectState.invertedControls) {
-            KeyboardInput self = (KeyboardInput) (Object) this;
-            self.leftImpulse = -self.leftImpulse;
-            self.forwardImpulse = -self.forwardImpulse;
-
-            boolean tmpUp = self.up;
-            self.up = self.down;
-            self.down = tmpUp;
-
-            boolean tmpLeft = self.left;
-            self.left = self.right;
-            self.right = tmpLeft;
+            return new Input(!forward, !backward, !left, !right, jump, shift, sprint);
         }
+        return new Input(forward, backward, left, right, jump, shift, sprint);
     }
 }

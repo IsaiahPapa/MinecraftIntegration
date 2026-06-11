@@ -21,12 +21,12 @@ public class DropperMinigame extends Minigame {
 
     @Override
     public Component getTitle() {
-        return Component.literal("Dropper").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#5555FF")).withBold(true));
+        return Component.literal("Dropper").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#5555FF").getOrThrow()).withBold(true));
     }
 
     @Override
     public Component getSubtitle() {
-        return Component.literal("Land in the water!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF")));
+        return Component.literal("Land in the water!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF").getOrThrow()));
     }
 
     @Override

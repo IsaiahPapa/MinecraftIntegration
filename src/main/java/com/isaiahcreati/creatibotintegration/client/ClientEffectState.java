@@ -71,8 +71,9 @@ public class ClientEffectState {
         dvdExpiryTick = 0;
         jumpscareActive = false;
         jumpscareExpiryTick = 0;
-        activeShaderId = null;
-        shaderExpiryTick = 0;
+        if (activeShaderId != null) {
+            ShaderManager.deactivateShader();
+        }
         invertedControls = false;
         invertedControlsExpiryTick = 0;
         mouseDrifting = false;

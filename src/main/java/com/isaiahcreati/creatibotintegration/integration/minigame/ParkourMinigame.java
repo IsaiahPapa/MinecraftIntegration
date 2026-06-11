@@ -21,12 +21,12 @@ public class ParkourMinigame extends Minigame {
 
     @Override
     public Component getTitle() {
-        return Component.literal("Parkour").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFAA00")).withBold(true));
+        return Component.literal("Parkour").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFAA00").getOrThrow()).withBold(true));
     }
 
     @Override
     public Component getSubtitle() {
-        return Component.literal("Complete the course in " + getDurationSeconds() + " seconds!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF")));
+        return Component.literal("Complete the course in " + getDurationSeconds() + " seconds!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF").getOrThrow()));
     }
 
     @Override

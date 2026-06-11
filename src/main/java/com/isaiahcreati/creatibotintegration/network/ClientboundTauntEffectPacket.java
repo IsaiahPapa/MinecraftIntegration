@@ -1,41 +1,39 @@
 package com.isaiahcreati.creatibotintegration.network;
 
+import com.isaiahcreati.creatibotintegration.CreatiIntegration;
+import com.isaiahcreati.creatibotintegration.client.ClientEffectManager;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
+public record ClientboundTauntEffectPacket(String effectId, int durationSeconds) implements CustomPacketPayload {
 
-public class ClientboundTauntEffectPacket {
-    private final String effectId;
-    private final int durationSeconds;
+    public static final Type<ClientboundTauntEffectPacket> TYPE =
+            new Type<>(Identifier.fromNamespaceAndPath(CreatiIntegration.MODID, "taunt_effects"));
 
-    public ClientboundTauntEffectPacket(String effectId, int durationSeconds) {
-        this.effectId = effectId;
-        this.durationSeconds = durationSeconds;
+    public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundTauntEffectPacket> STREAM_CODEC =
+            StreamCodec.of(ClientboundTauntEffectPacket::encode, ClientboundTauntEffectPacket::new);
+
+    public ClientboundTauntEffectPacket(RegistryFriendlyByteBuf buf) {
+        this(buf.readUtf(), buf.readVarInt());
     }
 
-    public ClientboundTauntEffectPacket(FriendlyByteBuf buf) {
-        this.effectId = buf.readUtf();
-        this.durationSeconds = buf.readVarInt();
+    public static void encode(RegistryFriendlyByteBuf buf, ClientboundTauntEffectPacket packet) {
+        buf.writeUtf(packet.effectId());
+        buf.writeVarInt(packet.durationSeconds());
     }
 
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeUtf(effectId);
-        buf.writeVarInt(durationSeconds);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            com.isaiahcreati.creatibotintegration.client.ClientEffectManager.activateEffect(effectId, durationSeconds);
+    public static void handle(ClientboundTauntEffectPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            ClientEffectManager.activateEffect(packet.effectId(), packet.durationSeconds());
         });
-        ctx.get().setPacketHandled(true);
     }
 
-    public String getEffectId() {
-        return effectId;
-    }
-
-    public int getDurationSeconds() {
-        return durationSeconds;
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 }

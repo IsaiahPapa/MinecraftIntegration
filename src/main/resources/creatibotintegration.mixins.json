@@ -1,11 +1,10 @@
 {
   "required": true,
   "package": "com.isaiahcreati.creatibotintegration.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_25",
   "refmap": "creatibotintegration.refmap.json",
   "minVersion": "0.8",
   "client": [
-    "GameRendererMixin",
     "KeyboardInputMixin",
     "MouseHandlerMixin"
   ],

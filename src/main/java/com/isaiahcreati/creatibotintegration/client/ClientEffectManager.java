@@ -2,7 +2,6 @@ package com.isaiahcreati.creatibotintegration.client;
 
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
 
 import java.util.Random;
 
@@ -68,7 +67,7 @@ public class ClientEffectManager {
             case "lsd" -> {
                 ClientEffectState.activeShaderId = "lsd";
                 ClientEffectState.shaderExpiryTick = expiryTick;
-                ShaderManager.activateShader(ShaderManager.WOBBLE);
+                ShaderManager.activateShader(ShaderManager.INVERT);
             }
             case "crt" -> {
                 ClientEffectState.activeShaderId = "crt";

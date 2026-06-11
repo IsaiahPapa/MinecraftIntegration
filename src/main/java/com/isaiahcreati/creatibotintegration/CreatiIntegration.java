@@ -17,25 +17,24 @@ import com.isaiahcreati.creatibotintegration.screens.ModConfigScreen;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.client.ConfigScreenHandler;
-import net.minecraftforge.event.ServerChatEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.ServerChatEvent;
 import org.slf4j.Logger;
 
 
@@ -56,23 +55,20 @@ public class CreatiIntegration {
     public static DropperMinigame getDropperMinigame() { return dropperMinigame; }
 
 
-    public CreatiIntegration() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public CreatiIntegration(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
-        MinecraftForge.EVENT_BUS.register(this);
-        MinecraftForge.EVENT_BUS.register(new EventHandler());
+        modEventBus.addListener(PacketHandler::register);
+        modEventBus.addListener(com.isaiahcreati.creatibotintegration.client.ClientModEventHandler::onRegisterGuiLayers);
+        NeoForge.EVENT_BUS.register(this);
         MinigameEventHandler.registerMinigame(parkourMinigame);
         MinigameEventHandler.registerMinigame(tntRunMinigame);
         MinigameEventHandler.registerMinigame(dropperMinigame);
-        MinecraftForge.EVENT_BUS.register(new MinigameEventHandler());
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
-        ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
-                () -> new ConfigScreenHandler.ConfigScreenFactory((minecraft, screen) -> ModConfigScreen.create(screen)));
+        NeoForge.EVENT_BUS.register(new MinigameEventHandler());
+        modContainer.registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
+        modContainer.registerExtensionPoint(IConfigScreenFactory.class, (java.util.function.Supplier<IConfigScreenFactory>) () -> (container, screen) -> ModConfigScreen.create(screen));
     }
 
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(PacketHandler::register);
-
+    private void commonSetup(final net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
         if (Config.needsReset()) {
             LOGGER.info("Config version outdated, resetting to defaults...");
             Config.resetToDefaults();
@@ -83,7 +79,6 @@ public class CreatiIntegration {
         return "development".equals(System.getenv("ENV"));
     }
 
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         try {
@@ -146,7 +141,7 @@ public class CreatiIntegration {
                                 Taunts.givePlayerItem(player, itemDetails.itemId, itemDetails.amount);
                                 Item item = Utils.getItemById(itemDetails.itemId);
 
-                                Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 gave you &bx" + itemDetails.amount + " " + item.getDescription().getString());
+                                Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 gave you &bx" + itemDetails.amount + " " + item.getName(item.getDefaultInstance()).getString());
                                 break;
                             case SPAWN:
                                 if (!(payload.details instanceof SpawnDetails spawnDetails)) break;
@@ -158,9 +153,8 @@ public class CreatiIntegration {
                                 if (!(payload.details instanceof EffectDetails effectDetails)) break;
 
                                 Taunts.applyPotionEffect(player, effectDetails.potionId, effectDetails.duration, effectDetails.amplifier);
-                                MobEffect effect = Utils.getPotionEffect(effectDetails.potionId);
-                                //TODO: Fix this so it prints out the potion info
-                                Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 splashed you with &b" + effect.getDisplayName().getString() + " " + Chat.NumberToRoman(effectDetails.amplifier + 1) + "!");
+                                Holder<MobEffect> effect = Utils.getPotionEffect(effectDetails.potionId);
+                                Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 splashed you with &b" + effect.value().getDescriptionId() + " " + Chat.NumberToRoman(effectDetails.amplifier + 1) + "!");
                                 break;
                             case TAUNT:
                                 if (!(payload.details instanceof TauntDetails tauntDetails)) break;
@@ -171,8 +165,6 @@ public class CreatiIntegration {
                                 }
                         }
                     }
-                    // TODO: on reconnect attempts, send user chat-message updates.
-
 
                 } catch (JsonSyntaxException e) {
                     LOGGER.error("Failed process interaction: " + e);
@@ -186,12 +178,6 @@ public class CreatiIntegration {
     }
 
     @SubscribeEvent
-    static void setupClient(final FMLClientSetupEvent event) {
-        LOGGER.info("Setting up client...");
-
-    }
-
-    @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Server stopping...");
         if (socket != null) {
@@ -202,17 +188,14 @@ public class CreatiIntegration {
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        // Get the username of the player who logged in
         String playerName = event.getEntity().getDisplayName().getString();
-
-        // Create the join message
         String joinMessage = playerName + " has joined the server! Welcome!";
     }
 
     @SubscribeEvent
     public void onChat(ServerChatEvent event) {
         String message = event.getMessage().getString();
-        message = message.replace('&', '§');
+        message = message.replace('&', '\u00a7');
         event.setMessage(Component.literal(message));
     }
 

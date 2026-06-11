@@ -21,7 +21,7 @@ public class TauntDispatcher {
     }
 
     public static boolean dispatchTaunt(ServerPlayer player, String tauntId, int clientEffectDuration) {
-        ServerLevel overworld = player.server.overworld();
+        ServerLevel overworld = player.level().getServer().overworld();
 
         switch (tauntId) {
             case "tnt" -> Taunts.spawnPrimedTntOnPlayer(overworld, player);

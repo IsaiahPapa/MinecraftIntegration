@@ -1,0 +1,76 @@
+{
+    "targets": {
+        "swap": {},
+        "swap2": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/bits",
+            "inputs": [
+                { "sampler_name": "In", "target": "minecraft:main" }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BitsConfig": [
+                    { "name": "Resolution", "type": "float", "value": 8.0 },
+                    { "name": "MosaicSize", "type": "float", "value": 2.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                { "sampler_name": "In", "target": "swap", "bilinear": true }
+            ],
+            "output": "swap2",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [1.0, 0.0] },
+                    { "name": "Radius", "type": "float", "value": 2.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                { "sampler_name": "In", "target": "swap2", "bilinear": true }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [0.0, 1.0] },
+                    { "name": "Radius", "type": "float", "value": 2.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/invert",
+            "inputs": [
+                { "sampler_name": "In", "target": "swap" }
+            ],
+            "output": "swap2",
+            "uniforms": {
+                "InvertConfig": [
+                    { "name": "InverseAmount", "type": "float", "value": 0.15 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                { "sampler_name": "In", "target": "swap2" }
+            ],
+            "output": "minecraft:main",
+            "uniforms": {
+                "BlitConfig": [
+                    { "name": "ColorModulate", "type": "vec4", "value": [0.95, 0.95, 0.85, 1.0] }
+                ]
+            }
+        }
+    ]
+}

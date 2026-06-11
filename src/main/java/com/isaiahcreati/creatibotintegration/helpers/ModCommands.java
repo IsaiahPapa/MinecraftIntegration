@@ -11,20 +11,18 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import io.socket.client.Socket;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.item.Item;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +31,7 @@ import java.util.Map;
 import static com.isaiahcreati.creatibotintegration.CreatiIntegration.LOGGER;
 import static com.isaiahcreati.creatibotintegration.CreatiIntegration.socket;
 
-@Mod.EventBusSubscriber
+@EventBusSubscriber(modid = CreatiIntegration.MODID)
 public class ModCommands {
 
     private static final String[] SERVER_TAUNTS = {
@@ -61,7 +59,7 @@ public class ModCommands {
 
         dispatcher.register(Commands.literal("creati")
                 .then(Commands.literal("connect")
-                        .requires(source -> source.hasPermission(0))
+                        
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             if (socket.isActive()) {
@@ -83,7 +81,7 @@ public class ModCommands {
                         })
                 )
                 .then(Commands.literal("disconnect")
-                        .requires(source -> source.hasPermission(0))
+                        
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             if (!socket.isActive()) {
@@ -91,17 +89,17 @@ public class ModCommands {
                                 return 0;
                             }
                             socket.close();
-                            player.sendSystemMessage(Component.literal("Disconnected from SocketIO").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55"))));
+                            player.sendSystemMessage(Component.literal("Disconnected from SocketIO").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
                             return 1;
                         })
                 )
                 .then(Commands.literal("parkour")
                         .then(Commands.literal("start")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (CreatiIntegration.getParkourMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are already in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        player.sendSystemMessage(Component.literal("You are already in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getParkourMinigame().enterPlayer(player, "Dev");
@@ -109,11 +107,11 @@ public class ModCommands {
                                 })
                         )
                         .then(Commands.literal("leave")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (!CreatiIntegration.getParkourMinigame().isInActiveMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are not in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        player.sendSystemMessage(Component.literal("You are not in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getParkourMinigame().exitPlayer(player, true);
@@ -121,11 +119,11 @@ public class ModCommands {
                                 })
                         )
                         .then(Commands.literal("forceexit")
-                                .requires(source -> source.hasPermission(3))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (!CreatiIntegration.getParkourMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("No active parkour session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55"))));
+                                        player.sendSystemMessage(Component.literal("No active parkour session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getParkourMinigame().handlePlayerReconnect(player);
@@ -135,11 +133,11 @@ public class ModCommands {
                 )
                 .then(Commands.literal("tntrun")
                         .then(Commands.literal("start")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (CreatiIntegration.getTntRunMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are already in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        player.sendSystemMessage(Component.literal("You are already in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getTntRunMinigame().enterPlayer(player, "Dev");
@@ -147,11 +145,11 @@ public class ModCommands {
                                 })
                         )
                         .then(Commands.literal("leave")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (!CreatiIntegration.getTntRunMinigame().isInActiveMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are not in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        player.sendSystemMessage(Component.literal("You are not in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getTntRunMinigame().exitPlayer(player, true);
@@ -161,11 +159,11 @@ public class ModCommands {
                 )
                 .then(Commands.literal("dropper")
                         .then(Commands.literal("start")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are already in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        player.sendSystemMessage(Component.literal("You are already in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getDropperMinigame().enterPlayer(player, "Dev");
@@ -173,11 +171,11 @@ public class ModCommands {
                                 })
                         )
                         .then(Commands.literal("leave")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (!CreatiIntegration.getDropperMinigame().isInActiveMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are not in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        player.sendSystemMessage(Component.literal("You are not in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getDropperMinigame().exitPlayer(player, true);
@@ -185,11 +183,11 @@ public class ModCommands {
                                 })
                         )
                         .then(Commands.literal("forceexit")
-                                .requires(source -> source.hasPermission(3))
+                                
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     if (!CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("No active Dropper session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55"))));
+                                        player.sendSystemMessage(Component.literal("No active Dropper session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
                                         return 0;
                                     }
                                     CreatiIntegration.getDropperMinigame().handlePlayerReconnect(player);
@@ -198,14 +196,14 @@ public class ModCommands {
                         )
                 )
                 .then(Commands.literal("test")
-                        .requires(source -> source.hasPermission(2))
+                        
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             sendTestMenu(player);
                             return 1;
                         })
                         .then(Commands.argument("tauntId", StringArgumentType.word())
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .suggests((context, builder) -> {
                                     for (String id : getAllTauntIds()) {
                                         builder.suggest(id);
@@ -227,13 +225,12 @@ public class ModCommands {
                                 })
                         )
                         .then(Commands.literal("spawn")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .then(Commands.argument("mobId", StringArgumentType.word())
                                         .suggests((context, builder) -> {
                                             String partial = builder.getRemaining().toLowerCase();
-                                            for (EntityType<?> type : ForgeRegistries.ENTITY_TYPES) {
-                                                ResourceLocation rl = ForgeRegistries.ENTITY_TYPES.getKey(type);
-                                                if (rl != null && rl.toString().toLowerCase().contains(partial)) {
+                                            for (Identifier rl : BuiltInRegistries.ENTITY_TYPE.keySet()) {
+                                                if (rl.toString().toLowerCase().contains(partial)) {
                                                     builder.suggest(rl.toString());
                                                 }
                                             }
@@ -259,13 +256,12 @@ public class ModCommands {
                                 )
                         )
                         .then(Commands.literal("splash")
-                                .requires(source -> source.hasPermission(2))
+                                
                                 .then(Commands.argument("effectId", StringArgumentType.word())
                                         .suggests((context, builder) -> {
                                             String partial = builder.getRemaining().toLowerCase();
-                                            for (MobEffect effect : ForgeRegistries.MOB_EFFECTS) {
-                                                ResourceLocation rl = ForgeRegistries.MOB_EFFECTS.getKey(effect);
-                                                if (rl != null && rl.toString().toLowerCase().contains(partial)) {
+                                            for (Identifier rl : BuiltInRegistries.MOB_EFFECT.keySet()) {
+                                                if (rl.toString().toLowerCase().contains(partial)) {
                                                     builder.suggest(rl.toString());
                                                 }
                                             }
@@ -320,15 +316,15 @@ public class ModCommands {
         player.sendSystemMessage(Component.literal(""));
 
         player.sendSystemMessage(Component.literal("\u00A7e\u00A7lServer Taunts:"));
-        sendTauntButtons(player, SERVER_TAUNTS, TextColor.parseColor("#FFAA00"));
+        sendTauntButtons(player, SERVER_TAUNTS, TextColor.parseColor("#FFAA00").getOrThrow());
 
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("\u00A7b\u00A7lClient Effects:"));
-        sendTauntButtons(player, CLIENT_TAUNTS, TextColor.parseColor("#55FFFF"));
+        sendTauntButtons(player, CLIENT_TAUNTS, TextColor.parseColor("#55FFFF").getOrThrow());
 
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("\u00A7a\u00A7lMinigames:"));
-        sendTauntButtons(player, MINIGAME_TAUNTS, TextColor.parseColor("#55FF55"));
+        sendTauntButtons(player, MINIGAME_TAUNTS, TextColor.parseColor("#55FF55").getOrThrow());
 
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
@@ -348,9 +344,8 @@ public class ModCommands {
             Component button = Component.literal("[" + displayName + "]")
                     .withStyle(Style.EMPTY
                             .withColor(buttonColor)
-                            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/creati test " + id))
-                            .withHoverEvent(new net.minecraft.network.chat.HoverEvent(net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
-                                    Component.literal("Click to test: " + id)))
+                            .withClickEvent(new ClickEvent.RunCommand("/creati test " + id))
+                            .withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(Component.literal("Click to test: " + id)))
                     );
             buttons.add(button);
         }

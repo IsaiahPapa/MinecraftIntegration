@@ -3,11 +3,12 @@ package com.isaiahcreati.creatibotintegration.integration.minigame;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,8 +37,7 @@ public class MinigameEventHandler {
     }
 
     @SubscribeEvent
-    public void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public void onServerTick(ServerTickEvent.Post event) {
         for (Minigame game : minigames) {
             game.onServerTick(event);
         }
@@ -58,7 +58,7 @@ public class MinigameEventHandler {
     }
 
     @SubscribeEvent
-    public void onPlayerHurt(LivingHurtEvent event) {
+    public void onPlayerHurt(LivingDamageEvent.Pre event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (!MinigameDimension.isMinigameDimension(player.level())) return;
 
@@ -67,7 +67,7 @@ public class MinigameEventHandler {
 
         if (event.getSource().is(DamageTypes.FALL) ||
             event.getSource().is(DamageTypes.FELL_OUT_OF_WORLD)) {
-            event.setCanceled(true);
+            event.setNewDamage(0);
         }
     }
 
@@ -95,7 +95,7 @@ public class MinigameEventHandler {
     }
 
     @SubscribeEvent
-    public void onPlayerTick(net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) {
+    public void onPlayerTick(PlayerTickEvent.Post event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             Taunts.updateFireTrail(player);
         }

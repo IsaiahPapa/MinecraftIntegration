@@ -1,10 +1,13 @@
 package com.isaiahcreati.creatibotintegration.helpers;
+
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
@@ -24,13 +27,11 @@ public final class Mobs {
     }
 
     static public void spawnMobNearPlayer(ServerPlayer player, String mobId, int amount, String mobName){
-        // Find the Entity given the mobId
         EntityType<?> mob =  getMobByName(mobId);
         if(mob == null) return;
 
-
         for (int i = 0; i < amount; i++) {
-            Entity mobEntity  = mob.create(player.level());
+            Entity mobEntity  = mob.create(player.level(), EntitySpawnReason.EVENT);
             if(mobEntity == null){
                 LOGGER.info("Cannot spawn mob. mobEntity is null");
             }
@@ -40,7 +41,7 @@ public final class Mobs {
                 return;
             };
             mobEntity.setCustomName(Component.literal(mobName));
-            mobEntity.setPos(safePosition.x, safePosition.y, safePosition.z); // Center the zombie in the block
+            mobEntity.setPos(safePosition.x, safePosition.y, safePosition.z);
             player.level().addFreshEntity(mobEntity);
         }
     }
@@ -49,7 +50,7 @@ public final class Mobs {
     public static EntityType<?> getMobByName(String mobId) {
         try{
             Optional<EntityType<?>> mobByString = EntityType.byString(mobId.toLowerCase());
-            if(!mobByString.isPresent()){
+            if(mobByString.isEmpty()){
                 LOGGER.info("Mob is not present");
                 return null;
             }
@@ -61,19 +62,17 @@ public final class Mobs {
 
     }
     static public Vec3 getSafeMobPosition(ServerPlayer player) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = (ServerLevel) player.level();
         BlockPos playerPos = player.blockPosition();
 
         for (int attempts = 0; attempts < 10; attempts++) {
             int x = playerPos.getX() + rand.nextInt(20) - 10;
             int z = playerPos.getZ() + rand.nextInt(20) - 10;
 
-            // Find the highest non-air block at the x, z coordinates (ground level)
             int y = world.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
 
             BlockPos spawnPos = new BlockPos(x, y, z);
 
-            // Check if the position above is air (safe for spawning)
             if (world.isEmptyBlock(spawnPos.above())) {
                 return new Vec3(x + 0.5, y + 1, z + 0.5);
             }

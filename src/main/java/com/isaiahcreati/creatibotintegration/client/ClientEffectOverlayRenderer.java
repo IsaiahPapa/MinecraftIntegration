@@ -1,23 +1,32 @@
 package com.isaiahcreati.creatibotintegration.client;
 
-import com.isaiahcreati.creatibotintegration.CreatiIntegration;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.gui.overlay.IGuiOverlay;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.client.gui.GuiLayer;
 
 public class ClientEffectOverlayRenderer {
 
-    private static final ResourceLocation PUMPKIN_TEXTURE = new ResourceLocation("minecraft", "textures/misc/pumpkinblur.png");
+    private static final Identifier PUMPKIN_TEXTURE = Identifier.withDefaultNamespace("textures/misc/pumpkinblur.png");
 
-    public static final IGuiOverlay PUMPKIN_OVERLAY = (gui, guiGraphics, partialTick, width, height) -> {
+    public static final Identifier PUMPKIN_OVERLAY_ID = Identifier.fromNamespaceAndPath("creatibotintegration", "pumpkin_overlay");
+    public static final Identifier DVD_OVERLAY_ID = Identifier.fromNamespaceAndPath("creatibotintegration", "dvd_overlay");
+
+    public static void renderPumpkinOverlay(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
         if (ClientEffectState.pumpkinViewActive) {
-            guiGraphics.blit(PUMPKIN_TEXTURE, 0, 0, 0.0F, 0.0F, width, height, width, height);
+            int width = guiGraphics.guiWidth();
+            int height = guiGraphics.guiHeight();
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, PUMPKIN_TEXTURE, 0, 0, 0.0f, 0.0f, width, height, width, height, width, height);
         }
-    };
+    }
 
-    public static final IGuiOverlay DVD_OVERLAY = (gui, guiGraphics, partialTick, width, height) -> {
+    public static void renderDvdOverlay(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
         if (!ClientEffectState.dvdActive) return;
+
+        int width = guiGraphics.guiWidth();
+        int height = guiGraphics.guiHeight();
 
         int left = (int) ClientEffectState.dvdX;
         int top = (int) ClientEffectState.dvdY;
@@ -35,5 +44,5 @@ public class ClientEffectOverlayRenderer {
         guiGraphics.fill(left - border, bottom, right + border, bottom + border, borderColor);
         guiGraphics.fill(left - border, top, left, bottom + border, borderColor);
         guiGraphics.fill(right, top - border, right + border, bottom + border, borderColor);
-    };
+    }
 }

@@ -2,17 +2,17 @@ package com.isaiahcreati.creatibotintegration.helpers;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
@@ -20,41 +20,37 @@ public class Utils {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public static void playSoundByName(@NotNull final Player player, String soundName) {
-        ResourceLocation resource = ResourceLocation.tryParse(soundName);
-        if (resource == null) {
-            LOGGER.info("Failed to find sound '" + soundName + "'");
-            return;
-        }
+        Identifier resource = Identifier.parse(soundName);
 
-        SoundEvent soundEvent = ForgeRegistries.SOUND_EVENTS.getValue(resource);
-        if (soundEvent == null) {
+        var holder = BuiltInRegistries.SOUND_EVENT.get(resource);
+        if (holder.isEmpty()) {
             LOGGER.info("Sound not found in registry: " + soundName);
             return;
         }
 
-        player.level().playSound(null, player.blockPosition(), soundEvent, SoundSource.NEUTRAL, 1.0F, 1.0F);
+        player.level().playSound(null, player.blockPosition(), holder.get().value(), SoundSource.NEUTRAL, 1.0F, 1.0F);
     }
 
     public static boolean isSafeLocation(Level world, BlockPos pos) {
-        return world.getBlockState(pos.below()).isSolidRender(world, pos.below()) &&
+        return world.getBlockState(pos.below()).isSolid() &&
                 world.isEmptyBlock(pos) && world.isEmptyBlock(pos.above());
     }
 
-    public static MobEffect getPotionEffect(String effectName){
-        ResourceLocation resource = ResourceLocation.tryParse(effectName);
-        return ForgeRegistries.MOB_EFFECTS.getValue(resource);
+    public static Holder<MobEffect> getPotionEffect(String effectName){
+        Identifier resource = Identifier.parse(effectName);
+        return BuiltInRegistries.MOB_EFFECT.get(resource).orElse(null);
     }
 
     public static Item getItemById(String itemName){
         itemName = itemName.toLowerCase();
-        ResourceLocation resource = ResourceLocation.tryParse(itemName);
-        return ForgeRegistries.ITEMS.getValue(resource);
+        Identifier resource = Identifier.parse(itemName);
+        return BuiltInRegistries.ITEM.getValue(resource);
     }
 
     public static EntityType<?> getEntityTypeByName(String entityId) {
-        ResourceLocation resource = ResourceLocation.tryParse(entityId.toLowerCase());
+        Identifier resource = Identifier.parse(entityId.toLowerCase());
         if (resource == null) return null;
-        return ForgeRegistries.ENTITY_TYPES.getValue(resource);
+        return BuiltInRegistries.ENTITY_TYPE.getValue(resource);
     }
 
 }

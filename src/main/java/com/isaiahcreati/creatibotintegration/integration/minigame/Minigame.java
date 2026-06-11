@@ -2,6 +2,7 @@ package com.isaiahcreati.creatibotintegration.integration.minigame;
 
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
@@ -14,10 +15,11 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.level.GameType;
-import net.minecraftforge.event.TickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -75,7 +77,7 @@ public abstract class Minigame {
             arenaBuilt = true;
         }
 
-        long currentTick = player.server.getPlayerList().getServer().getTickCount();
+        long currentTick = player.level().getServer().getTickCount();
         MinigamePlayerState state = new MinigamePlayerState(player, currentTick);
         activeSessions.put(player.getUUID(), state);
 
@@ -88,13 +90,13 @@ public abstract class Minigame {
             foodData.setFoodLevel(7);
         }
 
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 40, 4));
+        player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 40, 4));
         player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0));
 
         player.setGameMode(GameType.ADVENTURE);
 
         BlockPos startPos = getStartPos();
-        player.teleportTo(minigameLevel, startPos.getX() + 0.5, startPos.getY(), startPos.getZ() + 0.5, getStartYaw(), player.getXRot());
+        player.teleportTo(minigameLevel, startPos.getX() + 0.5, startPos.getY(), startPos.getZ() + 0.5, Set.<Relative>of(), getStartYaw(), player.getXRot(), false);
 
         minigameLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
 
@@ -111,16 +113,16 @@ public abstract class Minigame {
 
         removeTimerBar(player);
 
-        ServerLevel originalLevel = player.server.getLevel(state.getOriginalDimension());
+        ServerLevel originalLevel = player.level().getServer().getLevel(state.getOriginalDimension());
         if (originalLevel == null) {
-            originalLevel = player.server.overworld();
+            originalLevel = player.level().getServer().overworld();
         }
 
-        player.teleportTo(originalLevel, state.getOriginalX(), state.getOriginalY(), state.getOriginalZ(), state.getOriginalYRot(), state.getOriginalXRot());
+        player.teleportTo(originalLevel, state.getOriginalX(), state.getOriginalY(), state.getOriginalZ(), Set.<Relative>of(), state.getOriginalYRot(), state.getOriginalXRot(), false);
         originalLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
         player.setGameMode(state.getOriginalGameMode());
 
-        player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
+        player.removeEffect(MobEffects.RESISTANCE);
         player.removeEffect(MobEffects.SLOW_FALLING);
 
         if (!success) {
@@ -144,9 +146,7 @@ public abstract class Minigame {
 
     protected void onExit(ServerPlayer player, boolean success) {}
 
-    public void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-
+    public void onServerTick(ServerTickEvent.Post event) {
         long currentTick = event.getServer().getTickCount();
         int durationTicks = getDurationSeconds() * 20;
         int gracePeriodTicks = getGracePeriodSeconds() * 20;
@@ -222,7 +222,7 @@ public abstract class Minigame {
         ServerLevel minigameLevel = MinigameDimension.getMinigameLevel(player);
         if (minigameLevel != null) {
             for (ItemEntity itemEntity : minigameLevel.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(10))) {
-                ServerLevel originalLevel = player.server.getLevel(state.getOriginalDimension());
+                ServerLevel originalLevel = player.level().getServer().getLevel(state.getOriginalDimension());
                 if (originalLevel != null) {
                     ItemEntity transferredItem = new ItemEntity(
                             originalLevel,
@@ -257,12 +257,12 @@ public abstract class Minigame {
 
         removeTimerBar(player);
 
-        ServerLevel originalLevel = player.server.getLevel(state.getOriginalDimension());
-        if (originalLevel == null) originalLevel = player.server.overworld();
+        ServerLevel originalLevel = player.level().getServer().getLevel(state.getOriginalDimension());
+        if (originalLevel == null) originalLevel = player.level().getServer().overworld();
 
-        player.teleportTo(originalLevel, state.getOriginalX(), state.getOriginalY(), state.getOriginalZ(), state.getOriginalYRot(), state.getOriginalXRot());
+        player.teleportTo(originalLevel, state.getOriginalX(), state.getOriginalY(), state.getOriginalZ(), Set.<Relative>of(), state.getOriginalYRot(), state.getOriginalXRot(), false);
         player.setGameMode(state.getOriginalGameMode());
-        player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
+        player.removeEffect(MobEffects.RESISTANCE);
         player.removeEffect(MobEffects.SLOW_FALLING);
 
         Chat.SendAlert(player, "&7You were returned from " + getTitle().getString() + " after reconnecting.");
@@ -270,18 +270,18 @@ public abstract class Minigame {
 
     protected void showTimerBar(ServerPlayer player) {
         String timerText = isTimerSurvival() ? "Survive: " : "Timer: ";
-        player.displayClientMessage(Component.literal(timerText + getDurationSeconds() + "s").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))), true);
+        player.sendSystemMessage(Component.literal(timerText + getDurationSeconds() + "s").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())), true);
     }
 
     protected void updateTimerBar(ServerPlayer player, int durationTicks, int elapsedTicks) {
         int remainingSeconds = Math.max(0, (durationTicks - elapsedTicks) / 20);
         String colorHex = remainingSeconds <= 5 ? "#FF5555" : "#FFFF55";
         String timerText = isTimerSurvival() ? "Survive: " : "Timer: ";
-        player.displayClientMessage(Component.literal(timerText + remainingSeconds + "s").setStyle(Style.EMPTY.withColor(TextColor.parseColor(colorHex))), true);
+        player.sendSystemMessage(Component.literal(timerText + remainingSeconds + "s").setStyle(Style.EMPTY.withColor(TextColor.parseColor(colorHex).getOrThrow())), true);
     }
 
     protected void removeTimerBar(ServerPlayer player) {
-        player.displayClientMessage(Component.literal(""), true);
+        player.sendSystemMessage(Component.literal(""), true);
     }
 
     protected void markArenaNeedsRebuild() {

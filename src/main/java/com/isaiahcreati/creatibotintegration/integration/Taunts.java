@@ -3,6 +3,10 @@ package com.isaiahcreati.creatibotintegration.integration;
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -11,15 +15,16 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.Chicken;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raid;
+import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -28,17 +33,17 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.food.FoodData;
-import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.entity.EntitySpawnReason;
 
 public class Taunts {
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -81,7 +86,6 @@ public class Taunts {
         taunts.put("camera_tilt", new Taunt("camera_tilt", "Tilted Camera"));
         taunts.put("pumpkin_view", new Taunt("pumpkin_view", "Pumpkin View"));
         taunts.put("dvd", new Taunt("dvd", "DVD Screensaver"));
-        taunts.put("jumpscare", new Taunt("jumpscare", "Jumpscare!"));
         taunts.put("inverted_controls", new Taunt("inverted_controls", "Inverted Controls"));
         taunts.put("mouse_drifting", new Taunt("mouse_drifting", "Mouse Drifting"));
         taunts.put("blur", new Taunt("blur", "Blur"));
@@ -101,27 +105,26 @@ public class Taunts {
 
     public static void ShuffleInventory(ServerPlayer player){
         Inventory inventory = player.getInventory();
-        Collections.shuffle(inventory.items);
+        Collections.shuffle(inventory.getNonEquipmentItems());
         player.inventoryMenu.broadcastChanges();
     }
 
     public static void applyPotionEffect(ServerPlayer player, String effectName, int durationSeconds, int amplifier){
-        MobEffect effect = Utils.getPotionEffect(effectName);
+        Holder<MobEffect> effect = Utils.getPotionEffect(effectName);
         if(effect == null){
             LOGGER.error("Failed to find effect: " + effectName);
             return;
         }
-        LOGGER.info("Applying effect '" + effect.getDisplayName().getString() + "' for " + durationSeconds + " seconds!");
+        LOGGER.info("Applying effect for {} seconds!", durationSeconds);
         MobEffectInstance instance = new MobEffectInstance(effect, durationSeconds * 20, amplifier);
         player.addEffect(instance);
 
-        //Play splash noise
         Utils.playSoundByName(player, "minecraft:entity.splash_potion.break");
     }
 
     public static void strikeDownPlayer(ServerPlayer player){
         BlockPos playerPosition =  player.getOnPos();
-        Entity lightning = EntityType.LIGHTNING_BOLT.create(player.level());
+        Entity lightning = EntityType.LIGHTNING_BOLT.create(player.level(), EntitySpawnReason.EVENT);
         lightning.setPos(playerPosition.getX(), playerPosition.getY(), playerPosition.getZ());
         player.level().addFreshEntity(lightning);
     }
@@ -130,15 +133,12 @@ public class Taunts {
 
         BlockState blockState = player.level().getBlockState(underPlayerPosition);
 
-        // Play the block break sound
         player.level().playSound(null, underPlayerPosition, blockState.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0F, 1.0F);
 
-        // Replace the block with air
         player.level().setBlock(underPlayerPosition, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 
     }
     public static void teleportPlayerToRandomLocation(ServerPlayer player) {
-        // Current player position
         BlockPos currentPos = player.blockPosition();
         Level world = player.level();
 
@@ -152,8 +152,7 @@ public class Taunts {
             }
 
             if (Utils.isSafeLocation(world, newPos)) {
-                // Teleport the player
-                player.teleportTo(player.serverLevel(), newPos.getX() + 0.5, newPos.getY(), newPos.getZ() + 0.5, player.getYRot(), player.getXRot());
+                player.teleportTo((ServerLevel) player.level(), newPos.getX() + 0.5, newPos.getY(), newPos.getZ() + 0.5, Set.<Relative>of(), player.getYRot(), player.getXRot(), false);
                 return;
             }
         }
@@ -171,7 +170,7 @@ public class Taunts {
     }
 
     public static void spawnPrimedTntOnPlayer(Level world, ServerPlayer player) {
-        PrimedTnt tnt = new PrimedTnt(world, player.getX(), player.getY(), player.getZ(), null);
+        PrimedTnt tnt = new PrimedTnt(world, player.getX(), player.getY(), player.getZ(), player);
         tnt.setFuse(80);
         world.addFreshEntity(tnt);
         world.playSound(null, player.blockPosition(), SoundEvents.TNT_PRIMED, SoundSource.HOSTILE, 1.0F, 1.0F);
@@ -188,6 +187,7 @@ public class Taunts {
         force = force.scale(0.5);
 
         player.setDeltaMovement(force);
+        player.hurtMarked = true;
         player.hurt(source, 0.5f);
         player.level().playSound(null, player.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
@@ -238,10 +238,10 @@ public class Taunts {
         float originalYRot = player.getYRot();
         float originalXRot = player.getXRot();
 
-        Taunts.teleportPlayerToRandomLocation(player);
+        teleportPlayerToRandomLocation(player);
 
-        player.server.tell(new net.minecraft.server.TickTask(player.server.getTickCount() + 100, () -> {
-            player.teleportTo(player.serverLevel(), originalPos.getX() + 0.5, originalPos.getY(), originalPos.getZ() + 0.5, originalYRot, originalXRot);
+        player.level().getServer().executeIfPossible(new net.minecraft.server.TickTask(player.level().getServer().getTickCount() + 100, () -> {
+            player.teleportTo((ServerLevel) player.level(), originalPos.getX() + 0.5, originalPos.getY(), originalPos.getZ() + 0.5, Set.<Relative>of(), originalYRot, originalXRot, false);
             player.level().playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
         }));
     }
@@ -257,24 +257,24 @@ public class Taunts {
         double z = player.getZ() + (rand.nextDouble() - 0.5) * 6;
         double y = player.getY();
 
-        Entity entity = type.create(player.level());
+        Entity entity = type.create(player.level(), EntitySpawnReason.EVENT);
         if (entity == null) return;
 
         entity.setPos(x, y, z);
         if (entity instanceof Mob mob) {
-            mob.finalizeSpawn(player.serverLevel(), player.level().getCurrentDifficultyAt(entity.blockPosition()), MobSpawnType.EVENT, null, null);
+            mob.finalizeSpawn((ServerLevel) player.level(), player.level().getCurrentDifficultyAt(entity.blockPosition()), EntitySpawnReason.EVENT, null);
         }
         player.level().addFreshEntity(entity);
     }
 
     public static void chickenRain(ServerPlayer player) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         for (int i = 0; i < 20; i++) {
             double x = player.getX() + (rand.nextDouble() - 0.5) * 20;
             double z = player.getZ() + (rand.nextDouble() - 0.5) * 20;
             double y = player.getY() + 20 + rand.nextDouble() * 10;
 
-            Chicken chicken = EntityType.CHICKEN.create(level);
+            Chicken chicken = EntityType.CHICKEN.create(level, EntitySpawnReason.EVENT);
             if (chicken == null) continue;
             chicken.setPos(x, y, z);
             chicken.setDeltaMovement((rand.nextDouble() - 0.5) * 0.5, -0.5, (rand.nextDouble() - 0.5) * 0.5);
@@ -283,23 +283,23 @@ public class Taunts {
     }
 
     public static void meteorRain(ServerPlayer player) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         for (int i = 0; i < 8; i++) {
             double x = player.getX() + (rand.nextDouble() - 0.5) * 16;
             double z = player.getZ() + (rand.nextDouble() - 0.5) * 16;
             double y = player.getY() + 30 + rand.nextDouble() * 10;
 
-            PrimedTnt tnt = new PrimedTnt(level, x, y, z, null);
+            PrimedTnt tnt = new PrimedTnt(level, x, y, z, player);
             tnt.setFuse(40 + rand.nextInt(40));
             level.addFreshEntity(tnt);
         }
     }
 
     public static void triggerRaid(ServerPlayer player) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         Raid raid = level.getRaidAt(player.blockPosition());
         if (raid == null || raid.isStopped()) {
-            level.getRaids().createOrExtendRaid(player);
+            level.getRaids().createOrExtendRaid(player, player.blockPosition());
         }
     }
 
@@ -362,7 +362,6 @@ public class Taunts {
             Item downgrade = downgradeMap.get(stack.getItem());
             if (downgrade != null) {
                 ItemStack newStack = new ItemStack(downgrade, stack.getCount());
-                if (stack.hasTag()) newStack.setTag(stack.getTag().copy());
                 inv.setItem(i, newStack);
                 player.inventoryMenu.broadcastChanges();
                 player.level().playSound(null, player.blockPosition(), SoundEvents.ANVIL_BREAK, SoundSource.PLAYERS, 1.0F, 1.0F);
@@ -371,19 +370,18 @@ public class Taunts {
         }
     }
     public static void dropAnvilOnPlayer(ServerPlayer player) {
-        ServerLevel level = player.serverLevel();
-        FallingBlockEntity anvil = FallingBlockEntity.fall(level, new BlockPos(player.getBlockX(), player.getBlockY() + 3, player.getBlockZ()), Blocks.ANVIL.defaultBlockState());
+        FallingBlockEntity anvil = FallingBlockEntity.fall(player.level(), new BlockPos(player.getBlockX(), player.getBlockY() + 8, player.getBlockZ()), Blocks.ANVIL.defaultBlockState());
+        anvil.setHurtsEntities(2.0F, 40);
         player.level().playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 0.5F, 2.0F);
     }
 
     public static void buryPlayer(ServerPlayer player) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos feetPos = player.blockPosition();
         boolean placedAny = false;
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 for (int dy = -1; dy <= 1; dy++) {
-                    if (dy == 1) continue;
                     BlockPos pos = feetPos.offset(dx, dy, dz);
                     if (level.isEmptyBlock(pos)) {
                         level.setBlock(pos, Blocks.DIRT.defaultBlockState(), Block.UPDATE_ALL);
@@ -409,7 +407,9 @@ public class Taunts {
         if (slots.isEmpty()) return;
         int slot = slots.get(rand.nextInt(slots.size()));
         ItemStack stack = inv.getItem(slot);
-        net.minecraft.world.item.enchantment.Enchantment curse = rand.nextBoolean() ? Enchantments.BINDING_CURSE : Enchantments.VANISHING_CURSE;
+        Holder<net.minecraft.world.item.enchantment.Enchantment> curse = rand.nextBoolean()
+                ? player.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(Enchantments.BINDING_CURSE)
+                : player.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(Enchantments.VANISHING_CURSE);
         stack.enchant(curse, 1);
         player.inventoryMenu.broadcastChanges();
         player.level().playSound(null, player.blockPosition(), SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.HOSTILE, 1.0F, 1.0F);
@@ -424,15 +424,9 @@ public class Taunts {
             }
         }
         player.inventoryMenu.broadcastChanges();
-        player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_BREAK, SoundSource.HOSTILE, 1.0F, 1.0F);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_BREAK.value(), SoundSource.HOSTILE, 1.0F, 1.0F);
     }
 
-    //Could be a cool idea
     public static void randomizeMovementTemporarily(ServerPlayer player){
-        //Swap player movement temporarily.
-        // Ex: Forward is back, or left is up.
     }
-
-
-
 }
