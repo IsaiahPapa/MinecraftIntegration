@@ -58,6 +58,7 @@ public class Taunts {
         taunts.put("cobweb", new Taunt("cobweb", "Cobwebbed!"));
         taunts.put("parkour", new Taunt("parkour", "Parkour Course"));
         taunts.put("tntrun", new Taunt("tntrun", "TNT Run"));
+        taunts.put("dropper", new Taunt("dropper", "Dropper"));
         taunts.put("drop_all", new Taunt("drop_all", "Drop Everything!"));
         taunts.put("half_heart", new Taunt("half_heart", "Half-Hearted"));
         taunts.put("hungry", new Taunt("hungry", "Starving!"));

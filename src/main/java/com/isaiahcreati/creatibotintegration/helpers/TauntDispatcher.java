@@ -35,6 +35,7 @@ public class TauntDispatcher {
             case "cobweb" -> Taunts.webBlockPlayer(player);
             case "parkour" -> CreatiIntegration.getParkourMinigame().enterPlayer(player, "Dev");
             case "tntrun" -> CreatiIntegration.getTntRunMinigame().enterPlayer(player, "Dev");
+            case "dropper" -> CreatiIntegration.getDropperMinigame().enterPlayer(player, "Dev");
             case "drop_all" -> Taunts.dropAllInventory(player);
             case "half_heart" -> Taunts.setHalfHeart(player);
             case "hungry" -> Taunts.drainHunger(player);

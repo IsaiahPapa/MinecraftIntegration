@@ -13,11 +13,13 @@ public class Config {
     public static ForgeConfigSpec.ConfigValue<Integer> TNT_RUN_FAIL_DAMAGE;
     public static ForgeConfigSpec.ConfigValue<Integer> TNT_RUN_DECAY_DELAY_TICKS;
     public static ForgeConfigSpec.ConfigValue<Integer> TNT_RUN_GRACE_PERIOD_SECONDS;
+    public static ForgeConfigSpec.ConfigValue<Boolean> DROPPER_ENABLED;
+    public static ForgeConfigSpec.ConfigValue<Integer> DROPPER_FAIL_DAMAGE;
     public static ForgeConfigSpec.IntValue CONFIG_VERSION;
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final ForgeConfigSpec CLIENT_CONFIG;
-    public static final int CURRENT_CONFIG_VERSION = 2;
+    public static final int CURRENT_CONFIG_VERSION = 3;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -79,6 +81,18 @@ public class Config {
 
         builder.pop();
 
+        builder.comment("Dropper Settings").push("Dropper");
+
+        DROPPER_ENABLED = builder
+                .comment("Enable the Dropper taunt")
+                .define("dropper.enabled", true);
+
+        DROPPER_FAIL_DAMAGE = builder
+                .comment("Damage dealt on missing the water landing (2 damage = 1 heart)")
+                .defineInRange("dropper.fail_damage", 8, 0, 40);
+
+        builder.pop();
+
         CLIENT_CONFIG = builder.build();
     }
 
@@ -95,6 +109,8 @@ public class Config {
         PARKOUR_ENABLED.set(true);
         PARKOUR_DURATION_SECONDS.set(15);
         PARKOUR_FAIL_DAMAGE.set(8);
+        DROPPER_ENABLED.set(true);
+        DROPPER_FAIL_DAMAGE.set(8);
         CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
     }
 }

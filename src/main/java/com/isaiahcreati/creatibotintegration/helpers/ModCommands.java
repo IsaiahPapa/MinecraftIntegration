@@ -52,7 +52,7 @@ public class ModCommands {
     };
 
     private static final String[] MINIGAME_TAUNTS = {
-            "parkour", "tntrun"
+            "parkour", "tntrun", "dropper"
     };
 
     @SubscribeEvent
@@ -155,6 +155,44 @@ public class ModCommands {
                                         return 0;
                                     }
                                     CreatiIntegration.getTntRunMinigame().exitPlayer(player, true);
+                                    return 1;
+                                })
+                        )
+                )
+                .then(Commands.literal("dropper")
+                        .then(Commands.literal("start")
+                                .requires(source -> source.hasPermission(2))
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    if (CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
+                                        player.sendSystemMessage(Component.literal("You are already in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        return 0;
+                                    }
+                                    CreatiIntegration.getDropperMinigame().enterPlayer(player, "Dev");
+                                    return 1;
+                                })
+                        )
+                        .then(Commands.literal("leave")
+                                .requires(source -> source.hasPermission(2))
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    if (!CreatiIntegration.getDropperMinigame().isInActiveMinigame(player)) {
+                                        player.sendSystemMessage(Component.literal("You are not in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555"))));
+                                        return 0;
+                                    }
+                                    CreatiIntegration.getDropperMinigame().exitPlayer(player, true);
+                                    return 1;
+                                })
+                        )
+                        .then(Commands.literal("forceexit")
+                                .requires(source -> source.hasPermission(3))
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    if (!CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
+                                        player.sendSystemMessage(Component.literal("No active Dropper session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55"))));
+                                        return 0;
+                                    }
+                                    CreatiIntegration.getDropperMinigame().handlePlayerReconnect(player);
                                     return 1;
                                 })
                         )

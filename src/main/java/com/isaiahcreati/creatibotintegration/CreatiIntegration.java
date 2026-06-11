@@ -7,6 +7,7 @@ import com.isaiahcreati.creatibotintegration.helpers.Mobs;
 import com.isaiahcreati.creatibotintegration.helpers.TauntDispatcher;
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.isaiahcreati.creatibotintegration.integration.*;
+import com.isaiahcreati.creatibotintegration.integration.minigame.DropperMinigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.Minigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.MinigameEventHandler;
 import com.isaiahcreati.creatibotintegration.integration.minigame.ParkourMinigame;
@@ -48,9 +49,11 @@ public class CreatiIntegration {
     private final Taunts taunts = new Taunts();
     private static final ParkourMinigame parkourMinigame = new ParkourMinigame();
     private static final TntRunMinigame tntRunMinigame = new TntRunMinigame();
+    private static final DropperMinigame dropperMinigame = new DropperMinigame();
 
     public static ParkourMinigame getParkourMinigame() { return parkourMinigame; }
     public static TntRunMinigame getTntRunMinigame() { return tntRunMinigame; }
+    public static DropperMinigame getDropperMinigame() { return dropperMinigame; }
 
 
     public CreatiIntegration() {
@@ -60,6 +63,7 @@ public class CreatiIntegration {
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         MinigameEventHandler.registerMinigame(parkourMinigame);
         MinigameEventHandler.registerMinigame(tntRunMinigame);
+        MinigameEventHandler.registerMinigame(dropperMinigame);
         MinecraftForge.EVENT_BUS.register(new MinigameEventHandler());
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
         ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,

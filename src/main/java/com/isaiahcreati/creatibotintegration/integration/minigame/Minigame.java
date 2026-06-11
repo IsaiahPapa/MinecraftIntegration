@@ -5,9 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -46,6 +43,7 @@ public abstract class Minigame {
     public abstract void onTick(ServerPlayer player, long currentTick, long elapsedTicks);
     public abstract void onPlayerFall(ServerPlayer player);
 
+    public float getStartYaw() { return 0f; }
     public boolean hasGracePeriod() { return false; }
     public int getGracePeriodSeconds() { return 0; }
     protected void onGracePeriodCountdown(ServerPlayer player, int secondsRemaining) {}
@@ -96,13 +94,9 @@ public abstract class Minigame {
         player.setGameMode(GameType.ADVENTURE);
 
         BlockPos startPos = getStartPos();
-        player.teleportTo(minigameLevel, startPos.getX() + 0.5, startPos.getY(), startPos.getZ() + 0.5, player.getYRot(), player.getXRot());
+        player.teleportTo(minigameLevel, startPos.getX() + 0.5, startPos.getY(), startPos.getZ() + 0.5, getStartYaw(), player.getXRot());
 
         minigameLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
-
-        player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 60, 20));
-        player.connection.send(new ClientboundSetTitleTextPacket(getTitle()));
-        player.connection.send(new ClientboundSetSubtitleTextPacket(getSubtitle()));
 
         if (hasTimer()) {
             showTimerBar(player);
