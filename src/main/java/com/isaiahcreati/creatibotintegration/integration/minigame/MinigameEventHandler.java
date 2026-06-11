@@ -1,5 +1,6 @@
 package com.isaiahcreati.creatibotintegration.integration.minigame;
 
+import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraftforge.event.TickEvent;
@@ -36,9 +37,11 @@ public class MinigameEventHandler {
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         for (Minigame game : minigames) {
             game.onServerTick(event);
         }
+        Taunts.tickFireTrails();
     }
 
     @SubscribeEvent
@@ -88,6 +91,13 @@ public class MinigameEventHandler {
             if (game.isInMinigame(player)) {
                 game.handlePlayerReconnect(player);
             }
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerTick(net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            Taunts.updateFireTrail(player);
         }
     }
 

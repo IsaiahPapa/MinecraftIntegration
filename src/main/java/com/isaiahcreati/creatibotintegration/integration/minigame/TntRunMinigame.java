@@ -33,6 +33,20 @@ public class TntRunMinigame extends Minigame {
 
     private static final int[][] CROSS_OFFSETS = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
+    private int getClosestFloorY(ServerPlayer player) {
+        int playerY = (int) Math.floor(player.getY());
+        int closestFloor = TntRunArena.FLOOR_Y_LEVELS[0];
+        int minDist = Math.abs(playerY - closestFloor);
+        for (int i = 1; i < TntRunArena.FLOOR_Y_LEVELS.length; i++) {
+            int dist = Math.abs(playerY - TntRunArena.FLOOR_Y_LEVELS[i]);
+            if (dist < minDist) {
+                minDist = dist;
+                closestFloor = TntRunArena.FLOOR_Y_LEVELS[i];
+            }
+        }
+        return closestFloor;
+    }
+
     @Override
     public String getId() { return "tntrun"; }
 
@@ -127,6 +141,8 @@ public class TntRunMinigame extends Minigame {
         int cx = standingOn.getX();
         int cz = standingOn.getZ();
 
+        int playerFloorY = getClosestFloorY(player);
+
         for (int[] offset : CROSS_OFFSETS) {
             int checkX = cx + offset[0];
             int checkZ = cz + offset[1];
@@ -134,15 +150,13 @@ public class TntRunMinigame extends Minigame {
             if (checkX < arena.getMinX() || checkX > arena.getMaxX()
                     || checkZ < arena.getMinZ() || checkZ > arena.getMaxZ()) continue;
 
-            for (int floorY : TntRunArena.FLOOR_Y_LEVELS) {
-                BlockPos checkPos = new BlockPos(checkX, floorY, checkZ);
-                if (!level.getBlockState(checkPos).isAir() && !activatedBlocks.contains(checkPos)) {
-                    activatedBlocks.add(checkPos);
-                    int decayDelay = Config.TNT_RUN_DECAY_DELAY_TICKS.get();
-                    blocksToRemove.put(checkPos, currentTick + decayDelay);
+            BlockPos checkPos = new BlockPos(checkX, playerFloorY, checkZ);
+            if (!level.getBlockState(checkPos).isAir() && !activatedBlocks.contains(checkPos)) {
+                activatedBlocks.add(checkPos);
+                int decayDelay = Config.TNT_RUN_DECAY_DELAY_TICKS.get();
+                blocksToRemove.put(checkPos, currentTick + decayDelay);
 
-                    level.destroyBlockProgress(-1, checkPos, 0);
-                }
+                level.destroyBlockProgress(-1, checkPos, 0);
             }
         }
 

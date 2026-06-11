@@ -95,10 +95,10 @@ public abstract class Minigame {
 
         player.setGameMode(GameType.ADVENTURE);
 
-        player.level().playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
-
         BlockPos startPos = getStartPos();
         player.teleportTo(minigameLevel, startPos.getX() + 0.5, startPos.getY(), startPos.getZ() + 0.5, player.getYRot(), player.getXRot());
+
+        minigameLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
 
         player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 60, 20));
         player.connection.send(new ClientboundSetTitleTextPacket(getTitle()));
@@ -123,6 +123,7 @@ public abstract class Minigame {
         }
 
         player.teleportTo(originalLevel, state.getOriginalX(), state.getOriginalY(), state.getOriginalZ(), state.getOriginalYRot(), state.getOriginalXRot());
+        originalLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
         player.setGameMode(state.getOriginalGameMode());
 
         player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
@@ -132,6 +133,7 @@ public abstract class Minigame {
             float damage = getFailDamage();
             if (damage > 0) {
                 player.hurt(player.level().damageSources().generic(), damage);
+                player.level().playSound(null, player.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
             }
         }
 

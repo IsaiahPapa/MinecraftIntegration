@@ -3,18 +3,27 @@ package com.isaiahcreati.creatibotintegration.integration;
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.animal.Chicken;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -25,6 +34,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.food.FoodData;
+import net.minecraft.world.level.material.Fluids;
 
 public class Taunts {
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -44,10 +58,44 @@ public class Taunts {
         taunts.put("cobweb", new Taunt("cobweb", "Cobwebbed!"));
         taunts.put("parkour", new Taunt("parkour", "Parkour Course"));
         taunts.put("tntrun", new Taunt("tntrun", "TNT Run"));
+        taunts.put("drop_all", new Taunt("drop_all", "Drop Everything!"));
+        taunts.put("half_heart", new Taunt("half_heart", "Half-Hearted"));
+        taunts.put("hungry", new Taunt("hungry", "Starving!"));
+        taunts.put("sky", new Taunt("sky", "To The Moon!"));
+        taunts.put("fake_tp", new Taunt("fake_tp", "Fake Teleport"));
+        taunts.put("jumpscare", new Taunt("jumpscare", "Jumpscare!"));
+        taunts.put("chicken_rain", new Taunt("chicken_rain", "Chicken Rain"));
+        taunts.put("meteor_rain", new Taunt("meteor_rain", "Meteor Rain"));
+        taunts.put("raid", new Taunt("raid", "Prepare to Fight!"));
+        taunts.put("fire_trail", new Taunt("fire_trail", "Fire Trail"));
+        taunts.put("downgrade_gear", new Taunt("downgrade_gear", "Downgrade Gear"));
+        taunts.put("anvil", new Taunt("anvil", "Anvil Drop"));
+        taunts.put("bury", new Taunt("bury", "Buried Alive"));
+        taunts.put("curse_gear", new Taunt("curse_gear", "Cursed!"));
+        taunts.put("stack_one", new Taunt("stack_one", "Stack of One"));
+        taunts.put("fov_quake", new Taunt("fov_quake", "Quake FOV"));
+        taunts.put("fov_zoom", new Taunt("fov_zoom", "Ultra Zoom"));
+        taunts.put("upside_down", new Taunt("upside_down", "Upside Down"));
+        taunts.put("rolling_camera", new Taunt("rolling_camera", "Rolling Camera"));
+        taunts.put("camera_tilt", new Taunt("camera_tilt", "Tilted Camera"));
+        taunts.put("pumpkin_view", new Taunt("pumpkin_view", "Pumpkin View"));
+        taunts.put("dvd", new Taunt("dvd", "DVD Screensaver"));
+        taunts.put("jumpscare", new Taunt("jumpscare", "Jumpscare!"));
+        taunts.put("inverted_controls", new Taunt("inverted_controls", "Inverted Controls"));
+        taunts.put("mouse_drifting", new Taunt("mouse_drifting", "Mouse Drifting"));
+        taunts.put("blur", new Taunt("blur", "Blur"));
+        taunts.put("inverted_colors", new Taunt("inverted_colors", "Inverted Colors"));
+        taunts.put("black_and_white", new Taunt("black_and_white", "1950s"));
+        taunts.put("lsd", new Taunt("lsd", "Lucy In The Sky"));
+        taunts.put("crt", new Taunt("crt", "Monitor Downgrade"));
     }
 
     public Taunt getTauntById(String id) {
         return taunts.get(id);
+    }
+
+    public Map<String, Taunt> getAllTaunts() {
+        return taunts;
     }
 
     public static void ShuffleInventory(ServerPlayer player){
@@ -122,18 +170,10 @@ public class Taunts {
     }
 
     public static void spawnPrimedTntOnPlayer(Level world, ServerPlayer player) {
-        // Create the primed TNT entity
         PrimedTnt tnt = new PrimedTnt(world, player.getX(), player.getY(), player.getZ(), null);
-
-        int MIN = 2;
-        int MAX = 6;
-        int fuseTime = rand.nextInt(MAX - MIN) + MIN;
-
-        //TODO: Randomize tick amount
         tnt.setFuse(80);
-
-        // Add the TNT to the world
         world.addFreshEntity(tnt);
+        world.playSound(null, player.blockPosition(), SoundEvents.TNT_PRIMED, SoundSource.HOSTILE, 1.0F, 1.0F);
     }
 
     public static void smackPlayer(ServerPlayer player) {
@@ -148,7 +188,7 @@ public class Taunts {
 
         player.setDeltaMovement(force);
         player.hurt(source, 0.5f);
-        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
     public static void givePlayerItem(ServerPlayer player, String itemName, int amount){
         Item item = Utils.getItemById(itemName);
@@ -156,15 +196,236 @@ public class Taunts {
             LOGGER.info("Failed to find item 'minecraft:" + itemName + "'");
             return;
         }
-        ItemStack itemStack = new ItemStack(item, amount); // You can change the quantity if needed
+        ItemStack itemStack = new ItemStack(item, amount);
         boolean wasAdded = player.getInventory().add(itemStack);
 
         if (!wasAdded) {
-            // If the player's inventory is full, drop the item in the world
             ItemEntity itemEntity = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), itemStack);
             player.level().addFreshEntity(itemEntity);
         }
     }
+
+    public static void dropAllInventory(ServerPlayer player) {
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (!stack.isEmpty()) {
+                player.drop(stack.copyAndClear(), false);
+            }
+        }
+    }
+
+    public static void setHalfHeart(ServerPlayer player) {
+        player.setHealth(1.0f);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 1.0F, 1.5F);
+    }
+
+    public static void drainHunger(ServerPlayer player) {
+        FoodData food = player.getFoodData();
+        food.setFoodLevel(0);
+        food.setSaturation(0);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.GHAST_SCREAM, SoundSource.HOSTILE, 1.0F, 1.0F);
+    }
+
+    public static void launchToSky(ServerPlayer player) {
+        player.setDeltaMovement(player.getDeltaMovement().add(0, 5.0, 0));
+        player.hurtMarked = true;
+        player.level().playSound(null, player.blockPosition(), SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    public static void fakeTeleport(ServerPlayer player) {
+        BlockPos originalPos = player.blockPosition();
+        float originalYRot = player.getYRot();
+        float originalXRot = player.getXRot();
+
+        Taunts.teleportPlayerToRandomLocation(player);
+
+        player.server.tell(new net.minecraft.server.TickTask(player.server.getTickCount() + 100, () -> {
+            player.teleportTo(player.serverLevel(), originalPos.getX() + 0.5, originalPos.getY(), originalPos.getZ() + 0.5, originalYRot, originalXRot);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
+        }));
+    }
+
+    public static void spawnMob(ServerPlayer player, String mobId) {
+        EntityType<?> type = Utils.getEntityTypeByName(mobId);
+        if (type == null) {
+            LOGGER.error("Unknown mob type: {}", mobId);
+            return;
+        }
+
+        double x = player.getX() + (rand.nextDouble() - 0.5) * 6;
+        double z = player.getZ() + (rand.nextDouble() - 0.5) * 6;
+        double y = player.getY();
+
+        Entity entity = type.create(player.level());
+        if (entity == null) return;
+
+        entity.setPos(x, y, z);
+        if (entity instanceof Mob mob) {
+            mob.finalizeSpawn(player.serverLevel(), player.level().getCurrentDifficultyAt(entity.blockPosition()), MobSpawnType.EVENT, null, null);
+        }
+        player.level().addFreshEntity(entity);
+    }
+
+    public static void chickenRain(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        for (int i = 0; i < 20; i++) {
+            double x = player.getX() + (rand.nextDouble() - 0.5) * 20;
+            double z = player.getZ() + (rand.nextDouble() - 0.5) * 20;
+            double y = player.getY() + 20 + rand.nextDouble() * 10;
+
+            Chicken chicken = EntityType.CHICKEN.create(level);
+            if (chicken == null) continue;
+            chicken.setPos(x, y, z);
+            chicken.setDeltaMovement((rand.nextDouble() - 0.5) * 0.5, -0.5, (rand.nextDouble() - 0.5) * 0.5);
+            level.addFreshEntity(chicken);
+        }
+    }
+
+    public static void meteorRain(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        for (int i = 0; i < 8; i++) {
+            double x = player.getX() + (rand.nextDouble() - 0.5) * 16;
+            double z = player.getZ() + (rand.nextDouble() - 0.5) * 16;
+            double y = player.getY() + 30 + rand.nextDouble() * 10;
+
+            PrimedTnt tnt = new PrimedTnt(level, x, y, z, null);
+            tnt.setFuse(40 + rand.nextInt(40));
+            level.addFreshEntity(tnt);
+        }
+    }
+
+    public static void triggerRaid(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        Raid raid = level.getRaidAt(player.blockPosition());
+        if (raid == null || raid.isStopped()) {
+            level.getRaids().createOrExtendRaid(player);
+        }
+    }
+
+    private static final Map<java.util.UUID, Integer> fireTrailPlayers = new HashMap<>();
+
+    public static void startFireTrail(ServerPlayer player) {
+        fireTrailPlayers.put(player.getUUID(), 200);
+    }
+
+    public static void tickFireTrails() {
+        fireTrailPlayers.entrySet().removeIf(entry -> {
+            entry.setValue(entry.getValue() - 1);
+            return entry.getValue() <= 0;
+        });
+    }
+
+    public static void updateFireTrail(ServerPlayer player) {
+        Integer ticks = fireTrailPlayers.get(player.getUUID());
+        if (ticks == null) return;
+
+        BlockPos pos = player.getOnPos();
+        if (player.level().isEmptyBlock(pos.above()) && !player.level().getFluidState(pos).is(Fluids.LAVA)) {
+            player.level().setBlock(pos.above(), Blocks.FIRE.defaultBlockState(), Block.UPDATE_ALL);
+        }
+    }
+
+    public static void downgradeGear(ServerPlayer player) {
+        Map<Item, Item> downgradeMap = new HashMap<>();
+        downgradeMap.put(Items.NETHERITE_BOOTS, Items.DIAMOND_BOOTS);
+        downgradeMap.put(Items.NETHERITE_LEGGINGS, Items.DIAMOND_LEGGINGS);
+        downgradeMap.put(Items.NETHERITE_CHESTPLATE, Items.DIAMOND_CHESTPLATE);
+        downgradeMap.put(Items.NETHERITE_HELMET, Items.DIAMOND_HELMET);
+        downgradeMap.put(Items.NETHERITE_SWORD, Items.DIAMOND_SWORD);
+        downgradeMap.put(Items.NETHERITE_PICKAXE, Items.DIAMOND_PICKAXE);
+        downgradeMap.put(Items.NETHERITE_AXE, Items.DIAMOND_AXE);
+        downgradeMap.put(Items.NETHERITE_SHOVEL, Items.DIAMOND_SHOVEL);
+        downgradeMap.put(Items.NETHERITE_HOE, Items.DIAMOND_HOE);
+        downgradeMap.put(Items.DIAMOND_BOOTS, Items.IRON_BOOTS);
+        downgradeMap.put(Items.DIAMOND_LEGGINGS, Items.IRON_LEGGINGS);
+        downgradeMap.put(Items.DIAMOND_CHESTPLATE, Items.IRON_CHESTPLATE);
+        downgradeMap.put(Items.DIAMOND_HELMET, Items.IRON_HELMET);
+        downgradeMap.put(Items.DIAMOND_SWORD, Items.IRON_SWORD);
+        downgradeMap.put(Items.DIAMOND_PICKAXE, Items.IRON_PICKAXE);
+        downgradeMap.put(Items.DIAMOND_AXE, Items.IRON_AXE);
+        downgradeMap.put(Items.DIAMOND_SHOVEL, Items.IRON_SHOVEL);
+        downgradeMap.put(Items.DIAMOND_HOE, Items.IRON_HOE);
+        downgradeMap.put(Items.IRON_BOOTS, Items.LEATHER_BOOTS);
+        downgradeMap.put(Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS);
+        downgradeMap.put(Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE);
+        downgradeMap.put(Items.IRON_HELMET, Items.LEATHER_HELMET);
+        downgradeMap.put(Items.IRON_SWORD, Items.WOODEN_SWORD);
+        downgradeMap.put(Items.IRON_PICKAXE, Items.WOODEN_PICKAXE);
+        downgradeMap.put(Items.IRON_AXE, Items.WOODEN_AXE);
+        downgradeMap.put(Items.IRON_SHOVEL, Items.WOODEN_SHOVEL);
+        downgradeMap.put(Items.IRON_HOE, Items.WOODEN_HOE);
+
+        Inventory inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            Item downgrade = downgradeMap.get(stack.getItem());
+            if (downgrade != null) {
+                ItemStack newStack = new ItemStack(downgrade, stack.getCount());
+                if (stack.hasTag()) newStack.setTag(stack.getTag().copy());
+                inv.setItem(i, newStack);
+                player.inventoryMenu.broadcastChanges();
+                player.level().playSound(null, player.blockPosition(), SoundEvents.ANVIL_BREAK, SoundSource.PLAYERS, 1.0F, 1.0F);
+                return;
+            }
+        }
+    }
+    public static void dropAnvilOnPlayer(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        FallingBlockEntity anvil = FallingBlockEntity.fall(level, new BlockPos(player.getBlockX(), player.getBlockY() + 3, player.getBlockZ()), Blocks.ANVIL.defaultBlockState());
+        player.level().playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 0.5F, 2.0F);
+    }
+
+    public static void buryPlayer(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        BlockPos feetPos = player.blockPosition();
+        boolean placedAny = false;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (dy == 1) continue;
+                    BlockPos pos = feetPos.offset(dx, dy, dz);
+                    if (level.isEmptyBlock(pos)) {
+                        level.setBlock(pos, Blocks.DIRT.defaultBlockState(), Block.UPDATE_ALL);
+                        placedAny = true;
+                    }
+                }
+            }
+        }
+        if (placedAny) {
+            player.level().playSound(null, player.blockPosition(), SoundEvents.GRAVEL_PLACE, SoundSource.HOSTILE, 1.0F, 0.8F);
+        }
+    }
+
+    public static void curseGear(ServerPlayer player) {
+        Inventory inv = player.getInventory();
+        java.util.List<Integer> slots = new java.util.ArrayList<>();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                slots.add(i);
+            }
+        }
+        if (slots.isEmpty()) return;
+        int slot = slots.get(rand.nextInt(slots.size()));
+        ItemStack stack = inv.getItem(slot);
+        net.minecraft.world.item.enchantment.Enchantment curse = rand.nextBoolean() ? Enchantments.BINDING_CURSE : Enchantments.VANISHING_CURSE;
+        stack.enchant(curse, 1);
+        player.inventoryMenu.broadcastChanges();
+        player.level().playSound(null, player.blockPosition(), SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.HOSTILE, 1.0F, 1.0F);
+    }
+
+    public static void reduceStacksToOne(ServerPlayer player) {
+        Inventory inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty() && stack.getCount() > 1) {
+                stack.setCount(1);
+            }
+        }
+        player.inventoryMenu.broadcastChanges();
+        player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_BREAK, SoundSource.HOSTILE, 1.0F, 1.0F);
+    }
+
     //Could be a cool idea
     public static void randomizeMovementTemporarily(ServerPlayer player){
         //Swap player movement temporarily.

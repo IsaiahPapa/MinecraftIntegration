@@ -2,8 +2,8 @@ name: Publish pipeline
 
 on:
   push:
-#    tags:
-#      - v*
+    tags:
+      - 'v*'
 
 jobs:
   build:
@@ -27,7 +27,7 @@ jobs:
           settings-path: ${{ github.workspace }}
 
       - name: "Setup Gradle"
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/actions/setup-gradle@v4
 
       - name: "Run Gradle Publish"
         run: ./gradlew publish
@@ -35,26 +35,29 @@ jobs:
       - name: "Extract mod version"
         run: echo "MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)" >> $GITHUB_ENV
 
+      - name: "Determine release type"
+        run: |
+          if [[ "${{ github.ref_name }}" == *"-beta"* || "${{ github.ref_name }}" == *"-alpha"* ]]; then
+            echo "RELEASE_TYPE=beta" >> $GITHUB_ENV
+            echo "PRERELEASE=true" >> $GITHUB_ENV
+          else
+            echo "RELEASE_TYPE=release" >> $GITHUB_ENV
+            echo "PRERELEASE=false" >> $GITHUB_ENV
+          fi
+
       - name: "Create GitHub Release"
         uses: softprops/action-gh-release@v1
         with:
           name: "Release v${{ env.MOD_VERSION }}"
           tag_name: "${{ env.MOD_VERSION }}"
-          draft: true
-          prerelease: false
+          draft: false
+          prerelease: ${{ env.PRERELEASE }}
           files: |
             releases/*
 
-      - name: CurseForge Publish
-        run: ./gradlew curseforge -PcurseApiKey=${CURSE_API_KEY}
+      - name: "CurseForge Publish"
+        run: ./gradlew curseforge -PcurseApiKey=${CURSE_API_KEY} -PreleaseType=${RELEASE_TYPE}
         env:
           CURSE_API_KEY: ${{ secrets.CURSE_API_KEY }}
+          RELEASE_TYPE: ${{ env.RELEASE_TYPE }}
           BUILD_NUMBER: ${{ github.run_number }}
-        continue-on-error: true
-# TODO: Make this work, also make the Modrinth repo
-#      - name: Modrinth Publish
-#        run: ./gradlew modrinth -PmodrinthToken=${MODRINTH_TOKEN}
-#        env:
-#          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-#          BUILD_NUMBER: ${{ github.run_number }}
-#        continue-on-error: true

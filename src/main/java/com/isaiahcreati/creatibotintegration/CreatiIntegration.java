@@ -4,12 +4,15 @@ import com.google.gson.*;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
 import com.isaiahcreati.creatibotintegration.helpers.Mobs;
+import com.isaiahcreati.creatibotintegration.helpers.TauntDispatcher;
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.isaiahcreati.creatibotintegration.integration.*;
 import com.isaiahcreati.creatibotintegration.integration.minigame.Minigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.MinigameEventHandler;
 import com.isaiahcreati.creatibotintegration.integration.minigame.ParkourMinigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.TntRunMinigame;
+import com.isaiahcreati.creatibotintegration.network.PacketHandler;
+import com.isaiahcreati.creatibotintegration.screens.ModConfigScreen;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -19,6 +22,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -34,9 +38,9 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 
-// The value here should match an entry in the META-INF/mods.toml file
 @Mod("creatibotintegration")
 public class CreatiIntegration {
+    public static final String MODID = "creatibotintegration";
     public static final Logger LOGGER = LogUtils.getLogger();
     public static Socket socket;
     private int reconnectAttempts = 0;
@@ -58,15 +62,17 @@ public class CreatiIntegration {
         MinigameEventHandler.registerMinigame(tntRunMinigame);
         MinecraftForge.EVENT_BUS.register(new MinigameEventHandler());
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
+        ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
+                () -> new ConfigScreenHandler.ConfigScreenFactory((minecraft, screen) -> ModConfigScreen.create(screen)));
+    }
+
+    private void commonSetup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(PacketHandler::register);
 
         if (Config.needsReset()) {
             LOGGER.info("Config version outdated, resetting to defaults...");
             Config.resetToDefaults();
         }
-    }
-
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        LOGGER.info("HELLO FROM COMMON SETUP");
     }
 
     private boolean isDevelopmentEnvironment(){
@@ -155,20 +161,8 @@ public class CreatiIntegration {
                             case TAUNT:
                                 if (!(payload.details instanceof TauntDetails tauntDetails)) break;
                                 Taunt taunt = taunts.getTauntById(tauntDetails.tauntId);
-                                switch (tauntDetails.tauntId) {
-                                    case "tnt" -> Taunts.spawnPrimedTntOnPlayer(event.getServer().overworld(), player);
-                                    case "shuffle" -> Taunts.ShuffleInventory(player);
-                                    case "punch" -> Taunts.smackPlayer(player);
-                                    case "noise" -> Utils.playSoundByName(player, "CREEPER_PRIME");
-                                    case "strike" -> Taunts.strikeDownPlayer(player);
-                                    case "break" -> Taunts.breakBlockUnderPlayer(player);
-                                    case "wild" -> Taunts.teleportPlayerToRandomLocation(player);
-                                    case "drop" -> Taunts.dropHand(player);
-                                    case "cobweb" -> Taunts.webBlockPlayer(player);
-                                    case "parkour" -> parkourMinigame.enterPlayer(player, payload.metadata.redeemerName);
-                                    case "tntrun" -> tntRunMinigame.enterPlayer(player, payload.metadata.redeemerName);
-                                }
-                                if (taunt != null) {
+                                boolean dispatched = TauntDispatcher.dispatchTaunt(player, tauntDetails.tauntId);
+                                if (taunt != null && dispatched) {
                                     Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 taunted you with &b" + taunt.getDisplayName());
                                 }
                         }

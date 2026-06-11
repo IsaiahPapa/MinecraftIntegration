@@ -5,7 +5,6 @@ import net.minecraftforge.common.ForgeConfigSpec;
 public class Config {
     public static ForgeConfigSpec.ConfigValue<String> ALERT_KEY;
     public static ForgeConfigSpec.ConfigValue<Boolean> CHAT_ALERTS;
-    public static ForgeConfigSpec.ConfigValue<Boolean> CONNECT_ON_LOAD;
     public static ForgeConfigSpec.ConfigValue<Boolean> PARKOUR_ENABLED;
     public static ForgeConfigSpec.ConfigValue<Integer> PARKOUR_DURATION_SECONDS;
     public static ForgeConfigSpec.ConfigValue<Integer> PARKOUR_FAIL_DAMAGE;
