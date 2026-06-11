@@ -89,6 +89,70 @@ In-game: **Mods → Creati's Bot Integration → Config**
 Advanced settings (parkour duration, TNT Run decay, etc.) are in the config file:
 `creatibotintegration-common.toml`
 
+## Modpack
+
+A vanilla+ modpack is included in `modpack/` for easy distribution via CurseForge and Modrinth. It's managed with [Packwiz](https://packwiz.infra.link/).
+
+### Setup
+
+```bash
+# Install Packwiz (requires Go)
+go install github.com/packwiz/packwiz@latest
+
+# Navigate to the modpack directory
+cd modpack
+```
+
+### Adding Mods
+
+```bash
+# Search and add from CurseForge
+packwiz curseforge add <slug-or-search-term>
+
+# Add by CurseForge project ID
+packwiz curseforge add --addon-id <project-id>
+
+# Add from Modrinth
+packwiz modrinth add <slug-or-search-term>
+
+# Remove a mod
+packwiz remove <mod-name>
+```
+
+### Exporting
+
+```bash
+# CurseForge zip (upload to curseforge.com)
+./scripts/export-cf.sh
+
+# Modrinth .mrpack (upload to modrinth.com)
+./scripts/export-modrinth.sh
+```
+
+### Current Mods
+
+| Mod | Purpose |
+|-----|---------|
+| Creati's Bot Integration | Twitch bot integration |
+| YACL v3 | Required dependency |
+| Embeddium | Performance (rendering) |
+| Oculus | Shader support |
+| JEI | Recipe viewer |
+| AppleSkin | Food/hunger overlay |
+| Mouse Tweaks | Inventory sorting |
+| FerriteCore | Memory optimization |
+| Fast Leaf Decay | QOL |
+| Jade | HUD info overlay |
+| Complementary Reimagined | Shader pack (override) |
+
+### NeoForge Migration (Future)
+
+When moving to NeoForge/1.21.1:
+1. Create a new branch
+2. Change `forge` to `neoforge` in `modpack/pack.toml` and update the version
+3. Re-add mods with their NeoForge variants
+4. Update the Minecraft version and acceptable-game-versions
+
 ## License
 
 All Rights Reserved. See the LICENSE file for details.

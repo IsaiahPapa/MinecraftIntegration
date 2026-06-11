@@ -27,3 +27,10 @@ forge*changelog.txt
 #building
 output
 releases
+
+# modpack - packwiz cache
+modpack/.packwizcache/
+
+# modpack - export zips (root level)
+/ultimate-twitch-modpack-*.zip
+/ultimate-twitch-modpack-*.mrpack
