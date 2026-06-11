@@ -28,7 +28,15 @@ public class PayloadDeserializer implements JsonDeserializer<Payload> {
                 payload.details = context.deserialize(jsonObject.get("details"), EffectDetails.class);
                 break;
             case "taunt":
-                payload.details = context.deserialize(jsonObject.get("details"), TauntDetails.class);
+                JsonObject detailsObj = jsonObject.getAsJsonObject("details");
+                String tauntId = detailsObj.has("tauntId") ? detailsObj.get("tauntId").getAsString() : "";
+                if ("parkour".equals(tauntId)) {
+                    payload.details = context.deserialize(jsonObject.get("details"), ParkourDetails.class);
+                } else if ("tntrun".equals(tauntId)) {
+                    payload.details = context.deserialize(jsonObject.get("details"), TntRunDetails.class);
+                } else {
+                    payload.details = context.deserialize(jsonObject.get("details"), TauntDetails.class);
+                }
                 break;
             // Add cases for other action types
         }

@@ -6,6 +6,10 @@ import com.isaiahcreati.creatibotintegration.helpers.Chat;
 import com.isaiahcreati.creatibotintegration.helpers.Mobs;
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.isaiahcreati.creatibotintegration.integration.*;
+import com.isaiahcreati.creatibotintegration.integration.minigame.Minigame;
+import com.isaiahcreati.creatibotintegration.integration.minigame.MinigameEventHandler;
+import com.isaiahcreati.creatibotintegration.integration.minigame.ParkourMinigame;
+import com.isaiahcreati.creatibotintegration.integration.minigame.TntRunMinigame;
 import com.mojang.logging.LogUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -38,6 +42,11 @@ public class CreatiIntegration {
     private int reconnectAttempts = 0;
 
     private final Taunts taunts = new Taunts();
+    private static final ParkourMinigame parkourMinigame = new ParkourMinigame();
+    private static final TntRunMinigame tntRunMinigame = new TntRunMinigame();
+
+    public static ParkourMinigame getParkourMinigame() { return parkourMinigame; }
+    public static TntRunMinigame getTntRunMinigame() { return tntRunMinigame; }
 
 
     public CreatiIntegration() {
@@ -45,7 +54,15 @@ public class CreatiIntegration {
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
+        MinigameEventHandler.registerMinigame(parkourMinigame);
+        MinigameEventHandler.registerMinigame(tntRunMinigame);
+        MinecraftForge.EVENT_BUS.register(new MinigameEventHandler());
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
+
+        if (Config.needsReset()) {
+            LOGGER.info("Config version outdated, resetting to defaults...");
+            Config.resetToDefaults();
+        }
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -148,8 +165,12 @@ public class CreatiIntegration {
                                     case "wild" -> Taunts.teleportPlayerToRandomLocation(player);
                                     case "drop" -> Taunts.dropHand(player);
                                     case "cobweb" -> Taunts.webBlockPlayer(player);
+                                    case "parkour" -> parkourMinigame.enterPlayer(player, payload.metadata.redeemerName);
+                                    case "tntrun" -> tntRunMinigame.enterPlayer(player, payload.metadata.redeemerName);
                                 }
-                                Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 taunted you with &b" + taunt.getDisplayName());
+                                if (taunt != null) {
+                                    Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 taunted you with &b" + taunt.getDisplayName());
+                                }
                         }
                     }
                     // TODO: on reconnect attempts, send user chat-message updates.

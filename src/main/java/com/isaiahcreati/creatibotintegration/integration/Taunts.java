@@ -42,6 +42,8 @@ public class Taunts {
         taunts.put("wild", new Taunt("wild", "Teleport into the wild"));
         taunts.put("drop", new Taunt("drop", "Drop item in hand"));
         taunts.put("cobweb", new Taunt("cobweb", "Cobwebbed!"));
+        taunts.put("parkour", new Taunt("parkour", "Parkour Course"));
+        taunts.put("tntrun", new Taunt("tntrun", "TNT Run"));
     }
 
     public Taunt getTauntById(String id) {
@@ -135,26 +137,18 @@ public class Taunts {
     }
 
     public static void smackPlayer(ServerPlayer player) {
-
         DamageSource source = player.level().damageSources().generic();
 
+        double x = rand.nextDouble() * 2.0 - 1.0;
+        double y = rand.nextDouble() * 0.5 + 0.5;
+        double z = rand.nextDouble() * 2.0 - 1.0;
 
-        // Generate random components for the force vector
-        double x = rand.nextDouble() * 2.0 - 1.0; // random value between -1.0 and 1.0
-        double y = rand.nextDouble() * 0.5 + 0.5; // random value between 0.5 and 1.5 to ensure upward motion
-        double z = rand.nextDouble() * 2.0 - 1.0; // random value between -1.0 and 1.0
-
-        // Normalize the vector (to give it a consistent magnitude)
         Vec3 force = new Vec3(x, y, z).normalize();
-
-        // Apply a magnitude to the force (adjust 0.5 to change the strength of the force)
         force = force.scale(0.5);
 
-        // Apply the force to the player
         player.setDeltaMovement(force);
-
         player.hurt(source, 0.5f);
-
+        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
     public static void givePlayerItem(ServerPlayer player, String itemName, int amount){
         Item item = Utils.getItemById(itemName);
