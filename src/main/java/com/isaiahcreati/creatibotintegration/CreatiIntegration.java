@@ -4,6 +4,7 @@ import com.google.gson.*;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
 import com.isaiahcreati.creatibotintegration.helpers.Mobs;
+import com.isaiahcreati.creatibotintegration.helpers.OnboardingBook;
 import com.isaiahcreati.creatibotintegration.helpers.TauntDispatcher;
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.isaiahcreati.creatibotintegration.integration.*;
@@ -20,10 +21,12 @@ import io.socket.client.Socket;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -31,6 +34,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -188,8 +192,25 @@ public class CreatiIntegration {
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        String playerName = event.getEntity().getDisplayName().getString();
-        String joinMessage = playerName + " has joined the server! Welcome!";
+        if (!Config.ONBOARDED.get()) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                ItemStack book = OnboardingBook.create();
+                if (!player.getInventory().add(book)) {
+                    player.spawnAtLocation((ServerLevel) player.level(), book);
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            ItemStack heldItem = event.getItemStack();
+            if (OnboardingBook.isOnboardingBook(heldItem)) {
+                PacketHandler.sendOnboardingScreen(player);
+                event.setCanceled(true);
+            }
+        }
     }
 
     @SubscribeEvent

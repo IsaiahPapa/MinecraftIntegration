@@ -17,10 +17,11 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_GRACE_PERIOD_SECONDS;
     public static final ModConfigSpec.ConfigValue<Boolean> DROPPER_ENABLED;
     public static final ModConfigSpec.ConfigValue<Integer> DROPPER_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Boolean> ONBOARDED;
     public static final ModConfigSpec.IntValue CONFIG_VERSION;
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
-    public static final int CURRENT_CONFIG_VERSION = 3;
+    public static final int CURRENT_CONFIG_VERSION = 4;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -94,6 +95,10 @@ public class Config {
 
         builder.pop();
 
+        ONBOARDED = builder
+                .comment("Whether the onboarding setup has been completed")
+                .define("onboarded", false);
+
         CLIENT_CONFIG = builder.build();
     }
 
@@ -112,6 +117,7 @@ public class Config {
         PARKOUR_FAIL_DAMAGE.set(8);
         DROPPER_ENABLED.set(true);
         DROPPER_FAIL_DAMAGE.set(8);
+        ONBOARDED.set(false);
         CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
     }
 }

@@ -5,6 +5,7 @@ import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.integration.Taunt;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
+import com.isaiahcreati.creatibotintegration.network.PacketHandler;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -17,7 +18,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.effect.MobEffect;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -77,6 +81,24 @@ public class ModCommands {
                                 socket.emit("join", ALERT_KEY);
                                 LOGGER.info("Connected to SocketIO");
                             });
+                            return 1;
+                        })
+                )
+                .then(Commands.literal("setup")
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getPlayerOrException();
+                            PacketHandler.sendOnboardingScreen(player);
+                            return 1;
+                        })
+                )
+                .then(Commands.literal("book")
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getPlayerOrException();
+                            ItemStack book = OnboardingBook.create();
+                            if (!player.getInventory().add(book)) {
+                                player.spawnAtLocation((ServerLevel) player.level(), book);
+                            }
+                            player.sendSystemMessage(Component.literal("Gave you the onboarding book!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55AAFF").getOrThrow())));
                             return 1;
                         })
                 )
