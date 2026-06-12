@@ -2,13 +2,8 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id 'net.neoforged.gradle.userdev' version '7.1.36'
+    id 'net.neoforged.moddev' version '2.0.141'
     id "com.matthewprenger.cursegradle" version "1.4.0"
-}
-
-configurations {
-    shade
-    implementation.extendsFrom shade
 }
 
 version = mod_version
@@ -29,48 +24,83 @@ println "Mod Name: ${mod_name}, Version: ${version}, Title: ${project.name}"
 
 repositories {
     maven { url 'https://maven.isxander.dev/releases' }
-    maven { url 'https://maven.neoforged.net/releases' }
-    flatDir {
-        dirs 'libs'
-    }
+}
+
+configurations {
+    modpack
 }
 
 dependencies {
-    implementation "net.neoforged:neoforge:${neo_version}"
-
     implementation files('libs/yet_another_config_lib_v3-3.9.4+26.1-neoforge.jar')
 
-    shade group: 'io.socket', name: 'socket.io-client', version: '2.1.0'
+    jarJar(implementation('io.socket:socket.io-client:2.1.0')) {
+        version {
+            strictly '[2.1.0,3.0.0)'
+            prefer '2.1.0'
+        }
+    }
+
+    // Modpack runtime dependencies (not bundled in mod jar)
+    // Download jars from CurseForge and place in libs/modpack/
+    // Only included when running with modpack tasks (runClientWithModpack, etc.)
+    modpack fileTree(dir: 'libs/modpack', include: '*.jar')
 }
+
+neoForge {
+    version = neo_version
+
+    validateAccessTransformers = true
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+        }
+        server {
+            server()
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+            programArgument '--nogui'
+        }
+        data {
+            clientData()
+            programArguments.addAll '--mod', mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+        clientWithModpack {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+        }
+        serverWithModpack {
+            server()
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+            programArgument '--nogui'
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+// Add modpack jars to the modpack-specific run additional runtime classpath
+afterEvaluate {
+    project.configurations.findByName('clientWithModpackAdditionalRuntimeClasspath')?.extendsFrom project.configurations.modpack
+    project.configurations.findByName('serverWithModpackAdditionalRuntimeClasspath')?.extendsFrom project.configurations.modpack
+}
+
+// Copy modpack jars into run/mods/ so NeoForge's mod discoverer finds them
+tasks.register('copyModpackJars', Copy) {
+    from 'libs/modpack'
+    include '*.jar'
+    into "${project.projectDir}/run/mods"
+}
+
+tasks.named('prepareClientWithModpackRun') { dependsOn copyModpackJars }
+tasks.named('prepareServerWithModpackRun') { dependsOn copyModpackJars }
 
 sourceSets.main.resources {
     srcDir('src/generated/resources')
-}
-
-runs {
-    configureEach {
-        systemProperty 'forge.logging.markers', 'REGISTRIES'
-        systemProperty 'forge.logging.console.level', 'debug'
-        workingDirectory project.layout.projectDirectory.dir('run').dir(name)
-        modSource project.sourceSets.main
-    }
-
-    client {
-        systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
-    }
-
-    server {
-        systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
-        argument '--nogui'
-    }
-
-    gameTestServer {
-        systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
-    }
-
-    clientData {
-        arguments.addAll '--mod', mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
-    }
 }
 
 tasks.withType(ProcessResources).configureEach {
@@ -96,7 +126,7 @@ tasks.withType(ProcessResources).configureEach {
 
 shadowJar {
     archiveClassifier = ''
-    configurations = [project.configurations.shade]
+    configurations = [project.configurations.jarJar]
     relocate 'io.socket', "${project.group}.shadow.io.socket"
 }
 assemble.dependsOn shadowJar

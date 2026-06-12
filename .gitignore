@@ -28,6 +28,9 @@ forge*changelog.txt
 output
 releases
 
+# modpack - dev environment jars
+libs/modpack/*.jar
+
 # modpack - packwiz cache
 modpack/.packwizcache/
 
