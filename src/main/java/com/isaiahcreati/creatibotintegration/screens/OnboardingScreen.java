@@ -18,11 +18,13 @@ public class OnboardingScreen extends Screen {
     private static final int HEADER_COLOR = 0xFFFFFFFF;
 
     private int currentPage = 0;
-    private static final int TOTAL_PAGES = 5;
+    private static final int TOTAL_PAGES = 6;
 
     private EditBox alertKeyField;
     private boolean chatAlerts = true;
     private boolean minigamesEnabled = true;
+    private boolean sidebarVisible = true;
+    private boolean activityFeedVisible = true;
 
     private Button nextButton;
     private Button backButton;
@@ -30,6 +32,8 @@ public class OnboardingScreen extends Screen {
     private Button doneButton;
     private Button toggleChatAlertsButton;
     private Button toggleMinigamesButton;
+    private Button toggleSidebarButton;
+    private Button toggleActivityFeedButton;
 
     public OnboardingScreen() {
         super(Component.literal("CreatiBot Setup"));
@@ -101,6 +105,24 @@ public class OnboardingScreen extends Screen {
         ).bounds(centerX - 50, fieldY + 80, 100, 20).build();
         this.addRenderableWidget(toggleMinigamesButton);
 
+        toggleSidebarButton = Button.builder(
+                Component.literal("Sidebar: " + (sidebarVisible ? "\u2714 Visible" : "\u2718 Hidden")),
+                btn -> {
+                    sidebarVisible = !sidebarVisible;
+                    btn.setMessage(Component.literal("Sidebar: " + (sidebarVisible ? "\u2714 Visible" : "\u2718 Hidden")));
+                }
+        ).bounds(centerX - 80, fieldY + 10, 160, 20).build();
+        this.addRenderableWidget(toggleSidebarButton);
+
+        toggleActivityFeedButton = Button.builder(
+                Component.literal("Activity Feed: " + (activityFeedVisible ? "\u2714 Visible" : "\u2718 Hidden")),
+                btn -> {
+                    activityFeedVisible = !activityFeedVisible;
+                    btn.setMessage(Component.literal("Activity Feed: " + (activityFeedVisible ? "\u2714 Visible" : "\u2718 Hidden")));
+                }
+        ).bounds(centerX - 80, fieldY + 40, 160, 20).build();
+        this.addRenderableWidget(toggleActivityFeedButton);
+
         updateVisibility();
     }
 
@@ -118,6 +140,8 @@ public class OnboardingScreen extends Screen {
         doneButton.visible = currentPage == TOTAL_PAGES - 1;
         toggleChatAlertsButton.visible = currentPage == 2;
         toggleMinigamesButton.visible = currentPage == 3;
+        toggleSidebarButton.visible = currentPage == 4;
+        toggleActivityFeedButton.visible = currentPage == 4;
 
         int centerX = this.width / 2;
         int panelWidth = Math.min(320, this.width - 40);
@@ -125,7 +149,10 @@ public class OnboardingScreen extends Screen {
         int panelTop = this.height / 2 - panelHeight / 2;
         int bottomY = panelTop + panelHeight - 30;
 
-        if (hasBack) {
+        if (currentPage == TOTAL_PAGES - 1) {
+            doneButton.setX(centerX + 5);
+            backButton.setX(centerX - 85);
+        } else if (hasBack) {
             nextButton.setX(centerX + 5);
             backButton.setX(centerX - 85);
         } else {
@@ -140,7 +167,9 @@ public class OnboardingScreen extends Screen {
         ServerboundOnboardingPacket packet = new ServerboundOnboardingPacket(
                 alertKeyField.getValue(),
                 chatAlerts,
-                minigamesEnabled
+                minigamesEnabled,
+                sidebarVisible,
+                activityFeedVisible
         );
         ClientPacketDistributor.sendToServer(packet);
     }
@@ -177,6 +206,7 @@ public class OnboardingScreen extends Screen {
             case 2 -> renderPage2(graphics, centerX, textY, textWidth);
             case 3 -> renderPage3(graphics, centerX, textY, textWidth);
             case 4 -> renderPage4(graphics, centerX, textY, textWidth);
+            case 5 -> renderPage5(graphics, centerX, textY, textWidth);
         }
 
         renderPaginationDots(graphics, centerX, panelTop + panelHeight - 50, panelWidth);
@@ -220,6 +250,11 @@ public class OnboardingScreen extends Screen {
     }
 
     private void renderPage4(GuiGraphicsExtractor graphics, int centerX, int y, int width) {
+        renderCenteredText(graphics, "Queue Display", centerX, y, ACCENT_COLOR, true);
+        renderCenteredWordWrap(graphics, Component.literal("Customize how queue information is shown on your screen.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA").getOrThrow())), centerX, y + 16, width, TEXT_COLOR);
+    }
+
+    private void renderPage5(GuiGraphicsExtractor graphics, int centerX, int y, int width) {
         renderCenteredText(graphics, "All Set!", centerX, y, ACCENT_COLOR, true);
         renderCenteredWordWrap(graphics, Component.literal("You're configured and ready to go! You can always re-run /creati setup to change settings, or use the full config screen for advanced options.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA").getOrThrow())), centerX, y + 16, width, TEXT_COLOR);
         renderCenteredText(graphics, "Have fun streaming!", centerX, y + 70, HEADER_COLOR, false);

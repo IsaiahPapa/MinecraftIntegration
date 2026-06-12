@@ -30,6 +30,18 @@ public class PacketHandler {
                 ServerboundOnboardingPacket.STREAM_CODEC,
                 ServerboundOnboardingPacket::handle
         );
+
+        registrar.playToClient(
+                ClientboundQueueUpdatePacket.TYPE,
+                ClientboundQueueUpdatePacket.STREAM_CODEC,
+                ClientboundQueueUpdatePacket::handle
+        );
+
+        registrar.playToClient(
+                ClientboundActivityNotificationPacket.TYPE,
+                ClientboundActivityNotificationPacket.STREAM_CODEC,
+                ClientboundActivityNotificationPacket::handle
+        );
     }
 
     public static void sendToPlayer(ServerPlayer player, ClientboundTauntEffectPacket packet) {
@@ -40,7 +52,23 @@ public class PacketHandler {
         PacketDistributor.sendToAllPlayers(packet);
     }
 
+    public static void sendToPlayer(ServerPlayer player, ClientboundQueueUpdatePacket packet) {
+        PacketDistributor.sendToPlayer(player, packet);
+    }
+
+    public static void sendToAll(ClientboundQueueUpdatePacket packet) {
+        PacketDistributor.sendToAllPlayers(packet);
+    }
+
     public static void sendOnboardingScreen(ServerPlayer player) {
         PacketDistributor.sendToPlayer(player, new ClientboundOpenOnboardingPacket());
+    }
+
+    public static void sendToPlayer(ServerPlayer player, ClientboundActivityNotificationPacket packet) {
+        PacketDistributor.sendToPlayer(player, packet);
+    }
+
+    public static void sendToAll(ClientboundActivityNotificationPacket packet) {
+        PacketDistributor.sendToAllPlayers(packet);
     }
 }

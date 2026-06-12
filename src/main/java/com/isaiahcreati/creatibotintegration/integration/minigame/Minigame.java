@@ -1,6 +1,7 @@
 package com.isaiahcreati.creatibotintegration.integration.minigame;
 
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
+import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.network.chat.Component;
@@ -142,6 +143,8 @@ public abstract class Minigame {
                 arenaBuilt = false;
             }
         }
+
+        QueueManager.onMinigameEnd(player);
     }
 
     protected void onExit(ServerPlayer player, boolean success) {}

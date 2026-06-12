@@ -21,6 +21,7 @@ public class ClientEventHandler {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         ClientEffectManager.tick();
+        ActivityFeedState.tick();
     }
 
     @SubscribeEvent

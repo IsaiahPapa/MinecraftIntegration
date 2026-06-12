@@ -3,6 +3,7 @@ package com.isaiahcreati.creatibotintegration.client;
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import net.minecraft.client.Minecraft;
 
+import java.util.Map;
 import java.util.Random;
 
 public class ClientEffectManager {
@@ -13,6 +14,24 @@ public class ClientEffectManager {
         Minecraft mc = Minecraft.getInstance();
         long expiryTick = mc.level.getGameTime() + (durationSeconds * 20L);
 
+        if ("pause_effects".equals(effectId)) {
+            ClientEffectState.pauseAllVisualEffects(mc.level.getGameTime());
+            CreatiIntegration.LOGGER.info("Paused all visual effects");
+            return;
+        }
+
+        if ("resume_effects".equals(effectId)) {
+            resumeVisualEffects(durationSeconds);
+            CreatiIntegration.LOGGER.info("Resuming visual effects with {} seconds remaining", durationSeconds);
+            return;
+        }
+
+        applyEffect(effectId, expiryTick);
+        ClientEffectState.activateEffect(effectId, expiryTick);
+        CreatiIntegration.LOGGER.info("Activated client effect '{}' for {} seconds", effectId, durationSeconds);
+    }
+
+    private static void applyEffect(String effectId, long expiryTick) {
         switch (effectId) {
             case "fov_quake" -> {
                 ClientEffectState.fovOverride = 170f;
@@ -86,15 +105,31 @@ public class ClientEffectManager {
             }
             default -> CreatiIntegration.LOGGER.warn("Unknown client effect: {}", effectId);
         }
+    }
 
-        ClientEffectState.activateEffect(effectId, expiryTick);
-        CreatiIntegration.LOGGER.info("Activated client effect '{}' for {} seconds", effectId, durationSeconds);
+    private static void resumeVisualEffects(int remainingSeconds) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        long currentTick = mc.level.getGameTime();
+        long newExpiry = currentTick + (remainingSeconds * 20L);
+
+        Map<String, Long> paused = ClientEffectState.resumeAndGetPausedEffects();
+        for (Map.Entry<String, Long> entry : paused.entrySet()) {
+            String effectId = entry.getKey();
+            long remainingTicks = entry.getValue();
+            long effectExpiry = currentTick + remainingTicks;
+            applyEffect(effectId, effectExpiry);
+            ClientEffectState.activateEffect(effectId, effectExpiry);
+            CreatiIntegration.LOGGER.info("Resumed visual effect '{}' with {} ticks remaining", effectId, remainingTicks);
+        }
     }
 
     public static void tick() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         long currentTick = mc.level.getGameTime();
+
+        if (ClientEffectState.isEffectsPaused()) return;
 
         if (ClientEffectState.fovExpiryTick > 0 && currentTick >= ClientEffectState.fovExpiryTick) {
             ClientEffectState.fovOverride = 0f;

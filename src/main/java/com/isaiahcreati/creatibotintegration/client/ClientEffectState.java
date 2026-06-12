@@ -40,6 +40,9 @@ public class ClientEffectState {
 
     private static final Map<String, Long> activeEffects = new HashMap<>();
 
+    private static final Map<String, Long> pausedEffects = new HashMap<>();
+    private static boolean effectsPaused = false;
+
     public static void activateEffect(String effectId, long expiryTick) {
         activeEffects.put(effectId, expiryTick);
     }
@@ -58,8 +61,41 @@ public class ClientEffectState {
         activeEffects.remove(effectId);
     }
 
+    public static void pauseAllVisualEffects(long currentTick) {
+        effectsPaused = true;
+        for (Map.Entry<String, Long> entry : activeEffects.entrySet()) {
+            long remaining = entry.getValue() - currentTick;
+            if (remaining > 0) {
+                pausedEffects.put(entry.getKey(), remaining);
+            }
+        }
+        ShaderManager.deactivateShader();
+        activeShaderId = null;
+        pumpkinViewActive = false;
+        dvdActive = false;
+        fovOverride = 0f;
+        cameraRoll = 0f;
+        cameraRollSpeed = 0f;
+        invertedControls = false;
+        mouseDrifting = false;
+        activeEffects.clear();
+    }
+
+    public static Map<String, Long> resumeAndGetPausedEffects() {
+        effectsPaused = false;
+        Map<String, Long> result = new HashMap<>(pausedEffects);
+        pausedEffects.clear();
+        return result;
+    }
+
+    public static boolean isEffectsPaused() {
+        return effectsPaused;
+    }
+
     public static void clearAll() {
         activeEffects.clear();
+        pausedEffects.clear();
+        effectsPaused = false;
         fovOverride = 0f;
         fovExpiryTick = 0;
         cameraRoll = 0f;

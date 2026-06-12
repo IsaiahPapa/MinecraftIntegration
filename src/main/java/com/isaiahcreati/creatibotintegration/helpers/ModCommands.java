@@ -3,9 +3,11 @@ package com.isaiahcreati.creatibotintegration.helpers;
 import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
+import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunt;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import com.isaiahcreati.creatibotintegration.network.PacketHandler;
+import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -112,6 +114,92 @@ public class ModCommands {
                             }
                             socket.close();
                             player.sendSystemMessage(Component.literal("Disconnected from SocketIO").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
+                            return 1;
+                        })
+                )
+                .then(Commands.literal("notify")
+                        .then(Commands.argument("type", StringArgumentType.word())
+                                .suggests((context, builder) -> {
+                                    builder.suggest("GIVE");
+                                    builder.suggest("SPAWN");
+                                    builder.suggest("EFFECT");
+                                    builder.suggest("TAUNT_INSTANT");
+                                    builder.suggest("TAUNT_QUEUED");
+                                    builder.suggest("TAUNT_ACTIVATED");
+                                    builder.suggest("TAUNT_EXTENDED");
+                                    builder.suggest("MINIGAME_QUEUED");
+                                    builder.suggest("MINIGAME_ACTIVATED");
+                                    builder.suggest("VISUAL_EFFECT_QUEUED");
+                                    builder.suggest("VISUAL_EFFECT_ACTIVATED");
+                                    return builder.buildFuture();
+                                })
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    String type = StringArgumentType.getString(context, "type");
+                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, "tnt", "TestUser", "Test extra info", 0));
+                                    player.sendSystemMessage(Component.literal("Sent activity notification: " + type).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                    return 1;
+                                })
+                                .then(Commands.argument("name", StringArgumentType.word())
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            String type = StringArgumentType.getString(context, "type");
+                                            String name = StringArgumentType.getString(context, "name");
+                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, "TestUser", "", 0));
+                                            player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                            return 1;
+                                        })
+                                        .then(Commands.argument("redeemer", StringArgumentType.word())
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    String type = StringArgumentType.getString(context, "type");
+                                                    String name = StringArgumentType.getString(context, "name");
+                                                    String redeemer = StringArgumentType.getString(context, "redeemer");
+                                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", 0));
+                                                    player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                                    return 1;
+                                                })
+                                                .then(Commands.argument("position", IntegerArgumentType.integer(0))
+                                                        .executes(context -> {
+                                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                                            String type = StringArgumentType.getString(context, "type");
+                                                            String name = StringArgumentType.getString(context, "name");
+                                                            String redeemer = StringArgumentType.getString(context, "redeemer");
+                                                            int pos = IntegerArgumentType.getInteger(context, "position");
+                                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", pos));
+                                                            player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer + " #" + pos).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                                            return 1;
+                                                        })
+                                                )
+                                        )
+                                )
+                        )
+                )
+                .then(Commands.literal("queue")
+                        
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getPlayerOrException();
+                            if (!Config.QUEUE_ENABLED.get()) {
+                                player.sendSystemMessage(Component.literal("Queue system is disabled.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                return 0;
+                            }
+                            player.sendSystemMessage(Component.literal("\u00a76\u00a7l--- Queue Status ---"));
+                            String mg = QueueManager.getActiveMinigameId();
+                            if (mg != null && !mg.isEmpty()) {
+                                String redeemer = QueueManager.getActiveMinigameRedeemer();
+                                player.sendSystemMessage(Component.literal("\u00a7aActive minigame: \u00a7f" + mg + (redeemer != null ? " (by " + redeemer + ")" : "")));
+                            } else {
+                                player.sendSystemMessage(Component.literal("\u00a78No active minigame"));
+                            }
+                            String ve = QueueManager.getActiveVisualEffectId();
+                            if (ve != null && !ve.isEmpty()) {
+                                player.sendSystemMessage(Component.literal("\u00a7eActive effect: \u00a7f" + ve));
+                            } else {
+                                player.sendSystemMessage(Component.literal("\u00a78No active effect"));
+                            }
+                            player.sendSystemMessage(Component.literal("\u00a7bMinigame queue: \u00a7f" + QueueManager.getMinigameQueueSize()));
+                            player.sendSystemMessage(Component.literal("\u00a7bEffect queue: \u00a7f" + QueueManager.getVisualEffectQueueSize()));
+                            player.sendSystemMessage(Component.literal("\u00a7bPending taunts: \u00a7f" + QueueManager.getPendingTauntsSize()));
                             return 1;
                         })
                 )
@@ -235,6 +323,13 @@ public class ModCommands {
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     String tauntId = StringArgumentType.getString(context, "tauntId");
+                                    if (Config.QUEUE_ENABLED.get()) {
+                                        QueueManager.enqueue(player, tauntId, "Test", 15);
+                                        Taunt taunt = TauntDispatcher.getTaunts().getTauntById(tauntId);
+                                        String name = taunt != null ? taunt.getDisplayName() : tauntId;
+                                        Chat.SendAlert(player, "&7Test taunt (queued): &b" + name);
+                                        return 1;
+                                    }
                                     boolean success = TauntDispatcher.dispatchTaunt(player, tauntId, 5);
                                     if (success) {
                                         Taunt taunt = TauntDispatcher.getTaunts().getTauntById(tauntId);

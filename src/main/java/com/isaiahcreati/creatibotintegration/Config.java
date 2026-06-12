@@ -17,11 +17,16 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_GRACE_PERIOD_SECONDS;
     public static final ModConfigSpec.ConfigValue<Boolean> DROPPER_ENABLED;
     public static final ModConfigSpec.ConfigValue<Integer> DROPPER_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Boolean> QUEUE_ENABLED;
+    public static final ModConfigSpec.ConfigValue<Boolean> SIDEBAR_VISIBLE;
+    public static final ModConfigSpec.ConfigValue<Boolean> ACTIVITY_FEED_VISIBLE;
+    public static final ModConfigSpec.ConfigValue<Integer> STAGGER_DELAY_TICKS;
     public static final ModConfigSpec.ConfigValue<Boolean> ONBOARDED;
     public static final ModConfigSpec.IntValue CONFIG_VERSION;
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
-    public static final int CURRENT_CONFIG_VERSION = 4;
+    public static final String CATEGORY_QUEUE = "Queue";
+    public static final int CURRENT_CONFIG_VERSION = 6;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -95,6 +100,26 @@ public class Config {
 
         builder.pop();
 
+        builder.comment("Queue Settings").push(CATEGORY_QUEUE);
+
+        QUEUE_ENABLED = builder
+                .comment("Enable the queue system for minigames and visual effects")
+                .define("queue.enabled", true);
+
+        SIDEBAR_VISIBLE = builder
+                .comment("Show the queue sidebar on screen")
+                .define("queue.sidebar_visible", true);
+
+        ACTIVITY_FEED_VISIBLE = builder
+                .comment("Show the activity feed toast notifications on screen")
+                .define("queue.activity_feed_visible", true);
+
+        STAGGER_DELAY_TICKS = builder
+                .comment("Delay in ticks between releasing pending taunts after a minigame ends (20 ticks = 1 second)")
+                .defineInRange("queue.stagger_delay_ticks", 20, 0, 100);
+
+        builder.pop();
+
         ONBOARDED = builder
                 .comment("Whether the onboarding setup has been completed")
                 .define("onboarded", false);
@@ -117,6 +142,10 @@ public class Config {
         PARKOUR_FAIL_DAMAGE.set(8);
         DROPPER_ENABLED.set(true);
         DROPPER_FAIL_DAMAGE.set(8);
+        QUEUE_ENABLED.set(true);
+        SIDEBAR_VISIBLE.set(true);
+        ACTIVITY_FEED_VISIBLE.set(true);
+        STAGGER_DELAY_TICKS.set(20);
         ONBOARDED.set(false);
         CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
     }

@@ -1,5 +1,7 @@
 package com.isaiahcreati.creatibotintegration.integration.minigame;
 
+import com.isaiahcreati.creatibotintegration.Config;
+import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
@@ -42,6 +44,9 @@ public class MinigameEventHandler {
             game.onServerTick(event);
         }
         Taunts.tickFireTrails();
+        if (Config.QUEUE_ENABLED.get()) {
+            QueueManager.tick(event);
+        }
     }
 
     @SubscribeEvent
