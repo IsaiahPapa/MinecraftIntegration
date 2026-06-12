@@ -21,13 +21,12 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.effect.MobEffect;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.ArrayList;
@@ -59,13 +58,15 @@ public class ModCommands {
             "parkour", "tntrun", "dropper"
     };
 
+    private static final Permission HAS_OP = new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS);
+
     @SubscribeEvent
     public static void onCommandsRegister(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
         dispatcher.register(Commands.literal("creati")
+                // /creati connect
                 .then(Commands.literal("connect")
-                        
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             if (socket.isActive()) {
@@ -86,26 +87,8 @@ public class ModCommands {
                             return 1;
                         })
                 )
-                .then(Commands.literal("setup")
-                        .executes(context -> {
-                            ServerPlayer player = context.getSource().getPlayerOrException();
-                            PacketHandler.sendOnboardingScreen(player);
-                            return 1;
-                        })
-                )
-                .then(Commands.literal("book")
-                        .executes(context -> {
-                            ServerPlayer player = context.getSource().getPlayerOrException();
-                            ItemStack book = OnboardingBook.create();
-                            if (!player.getInventory().add(book)) {
-                                player.spawnAtLocation((ServerLevel) player.level(), book);
-                            }
-                            player.sendSystemMessage(Component.literal("Gave you the onboarding book!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55AAFF").getOrThrow())));
-                            return 1;
-                        })
-                )
+                // /creati disconnect
                 .then(Commands.literal("disconnect")
-                        
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             if (!socket.isActive()) {
@@ -117,242 +100,106 @@ public class ModCommands {
                             return 1;
                         })
                 )
-                .then(Commands.literal("debugicon")
+                // /creati setup
+                .then(Commands.literal("setup")
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
-                            PacketHandler.sendDebugIconScreen(player);
+                            PacketHandler.sendOnboardingScreen(player);
                             return 1;
                         })
                 )
-                .then(Commands.literal("notify")
-                        .then(Commands.argument("type", StringArgumentType.word())
-                                .suggests((context, builder) -> {
-                                    builder.suggest("GIVE");
-                                    builder.suggest("SPAWN");
-                                    builder.suggest("EFFECT");
-                                    builder.suggest("TAUNT_INSTANT");
-                                    builder.suggest("TAUNT_QUEUED");
-                                    builder.suggest("TAUNT_ACTIVATED");
-                                    builder.suggest("TAUNT_EXTENDED");
-                                    builder.suggest("MINIGAME_QUEUED");
-                                    builder.suggest("MINIGAME_ACTIVATED");
-                                    builder.suggest("VISUAL_EFFECT_QUEUED");
-                                    builder.suggest("VISUAL_EFFECT_ACTIVATED");
-                                    return builder.buildFuture();
-                                })
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    String type = StringArgumentType.getString(context, "type");
-                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, "tnt", "TestUser", "Test extra info", 0, ToastIconHelper.getIconForTaunt("tnt")));
-                                    player.sendSystemMessage(Component.literal("Sent activity notification: " + type).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
-                                    return 1;
-                                })
-                                .then(Commands.argument("name", StringArgumentType.word())
-                                        .executes(context -> {
-                                            ServerPlayer player = context.getSource().getPlayerOrException();
-                                            String type = StringArgumentType.getString(context, "type");
-                                            String name = StringArgumentType.getString(context, "name");
-                                            String icon = ToastIconHelper.getIconForTaunt(name);
-                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, "TestUser", "", 0, icon));
-                                            player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
-                                            return 1;
-                                        })
-                                        .then(Commands.argument("redeemer", StringArgumentType.word())
-                                                .executes(context -> {
-                                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                                    String type = StringArgumentType.getString(context, "type");
-                                                    String name = StringArgumentType.getString(context, "name");
-                                                    String redeemer = StringArgumentType.getString(context, "redeemer");
-                                                    String icon = ToastIconHelper.getIconForTaunt(name);
-                                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", 0, icon));
-                                                    player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
-                                                    return 1;
-                                                })
-                                                .then(Commands.argument("position", IntegerArgumentType.integer(0))
-                                                        .executes(context -> {
-                                                            ServerPlayer player = context.getSource().getPlayerOrException();
-                                                            String type = StringArgumentType.getString(context, "type");
-                                                            String name = StringArgumentType.getString(context, "name");
-                                                            String redeemer = StringArgumentType.getString(context, "redeemer");
-                                                            int pos = IntegerArgumentType.getInteger(context, "position");
-                                                            String icon = ToastIconHelper.getIconForTaunt(name);
-                                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", pos, icon));
-                                                            player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer + " #" + pos).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
-                                                            return 1;
-                                                        })
-                                                )
-                                        )
-                                )
-                        )
-                )
-                .then(Commands.literal("queue")
-                        
+                // /creati book
+                .then(Commands.literal("book")
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
-                            if (!Config.QUEUE_ENABLED.get()) {
-                                player.sendSystemMessage(Component.literal("Queue system is disabled.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
-                                return 0;
+                            ItemStack book = OnboardingBook.create();
+                            if (!player.getInventory().add(book)) {
+                                player.spawnAtLocation((ServerLevel) player.level(), book);
                             }
-                            player.sendSystemMessage(Component.literal("\u00a76\u00a7l--- Queue Status ---"));
-                            String mg = QueueManager.getActiveMinigameId();
-                            if (mg != null && !mg.isEmpty()) {
-                                String redeemer = QueueManager.getActiveMinigameRedeemer();
-                                player.sendSystemMessage(Component.literal("\u00a7aActive minigame: \u00a7f" + mg + (redeemer != null ? " (by " + redeemer + ")" : "")));
-                            } else {
-                                player.sendSystemMessage(Component.literal("\u00a78No active minigame"));
-                            }
-                            String ve = QueueManager.getActiveVisualEffectId();
-                            if (ve != null && !ve.isEmpty()) {
-                                player.sendSystemMessage(Component.literal("\u00a7eActive effect: \u00a7f" + ve));
-                            } else {
-                                player.sendSystemMessage(Component.literal("\u00a78No active effect"));
-                            }
-                            player.sendSystemMessage(Component.literal("\u00a7bMinigame queue: \u00a7f" + QueueManager.getMinigameQueueSize()));
-                            player.sendSystemMessage(Component.literal("\u00a7bEffect queue: \u00a7f" + QueueManager.getVisualEffectQueueSize()));
-                            player.sendSystemMessage(Component.literal("\u00a7bPending taunts: \u00a7f" + QueueManager.getPendingTauntsSize()));
+                            player.sendSystemMessage(Component.literal("Gave you the onboarding book!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55AAFF").getOrThrow())));
                             return 1;
                         })
                 )
-                .then(Commands.literal("parkour")
-                        .then(Commands.literal("start")
-                                
+                // /creati debug queue
+                // /creati debug icon
+                .then(Commands.literal("debug")
+                        .then(Commands.literal("queue")
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (CreatiIntegration.getParkourMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are already in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                    if (!Config.QUEUE_ENABLED.get()) {
+                                        player.sendSystemMessage(Component.literal("Queue system is disabled.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
                                         return 0;
                                     }
-                                    CreatiIntegration.getParkourMinigame().enterPlayer(player, "Dev");
+                                    player.sendSystemMessage(Component.literal("\u00a76\u00a7l--- Queue Status ---"));
+                                    String mg = QueueManager.getActiveMinigameId();
+                                    if (mg != null && !mg.isEmpty()) {
+                                        String redeemer = QueueManager.getActiveMinigameRedeemer();
+                                        player.sendSystemMessage(Component.literal("\u00a7aActive minigame: \u00a7f" + mg + (redeemer != null ? " (by " + redeemer + ")" : "")));
+                                    } else {
+                                        player.sendSystemMessage(Component.literal("\u00a78No active minigame"));
+                                    }
+                                    String ve = QueueManager.getActiveVisualEffectId();
+                                    if (ve != null && !ve.isEmpty()) {
+                                        player.sendSystemMessage(Component.literal("\u00a7eActive effect: \u00a7f" + ve));
+                                    } else {
+                                        player.sendSystemMessage(Component.literal("\u00a78No active effect"));
+                                    }
+                                    player.sendSystemMessage(Component.literal("\u00a7bMinigame queue: \u00a7f" + QueueManager.getMinigameQueueSize()));
+                                    player.sendSystemMessage(Component.literal("\u00a7bEffect queue: \u00a7f" + QueueManager.getVisualEffectQueueSize()));
+                                    player.sendSystemMessage(Component.literal("\u00a7bPending taunts: \u00a7f" + QueueManager.getPendingTauntsSize()));
                                     return 1;
                                 })
                         )
-                        .then(Commands.literal("leave")
-                                
+                        .then(Commands.literal("icon")
+                                .requires(source -> source.permissions().hasPermission(HAS_OP))
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (!CreatiIntegration.getParkourMinigame().isInActiveMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are not in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
-                                        return 0;
-                                    }
-                                    CreatiIntegration.getParkourMinigame().exitPlayer(player, true);
-                                    return 1;
-                                })
-                        )
-                        .then(Commands.literal("forceexit")
-                                
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (!CreatiIntegration.getParkourMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("No active parkour session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
-                                        return 0;
-                                    }
-                                    CreatiIntegration.getParkourMinigame().handlePlayerReconnect(player);
-                                    return 1;
-                                })
-                        )
-                )
-                .then(Commands.literal("tntrun")
-                        .then(Commands.literal("start")
-                                
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (CreatiIntegration.getTntRunMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are already in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
-                                        return 0;
-                                    }
-                                    CreatiIntegration.getTntRunMinigame().enterPlayer(player, "Dev");
-                                    return 1;
-                                })
-                        )
-                        .then(Commands.literal("leave")
-                                
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (!CreatiIntegration.getTntRunMinigame().isInActiveMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are not in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
-                                        return 0;
-                                    }
-                                    CreatiIntegration.getTntRunMinigame().exitPlayer(player, true);
+                                    PacketHandler.sendDebugIconScreen(player);
                                     return 1;
                                 })
                         )
                 )
-                .then(Commands.literal("dropper")
-                        .then(Commands.literal("start")
-                                
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are already in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
-                                        return 0;
-                                    }
-                                    CreatiIntegration.getDropperMinigame().enterPlayer(player, "Dev");
-                                    return 1;
-                                })
-                        )
-                        .then(Commands.literal("leave")
-                                
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (!CreatiIntegration.getDropperMinigame().isInActiveMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("You are not in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
-                                        return 0;
-                                    }
-                                    CreatiIntegration.getDropperMinigame().exitPlayer(player, true);
-                                    return 1;
-                                })
-                        )
-                        .then(Commands.literal("forceexit")
-                                
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    if (!CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
-                                        player.sendSystemMessage(Component.literal("No active Dropper session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
-                                        return 0;
-                                    }
-                                    CreatiIntegration.getDropperMinigame().handlePlayerReconnect(player);
-                                    return 1;
-                                })
-                        )
-                )
+                // /creati test (op)
                 .then(Commands.literal("test")
-                        
+                        .requires(source -> source.permissions().hasPermission(HAS_OP))
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             sendTestMenu(player);
                             return 1;
                         })
-                        .then(Commands.argument("tauntId", StringArgumentType.word())
-                                
-                                .suggests((context, builder) -> {
-                                    for (String id : getAllTauntIds()) {
-                                        builder.suggest(id);
-                                    }
-                                    return builder.buildFuture();
-                                })
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    String tauntId = StringArgumentType.getString(context, "tauntId");
-                                    if (Config.QUEUE_ENABLED.get()) {
-                                        QueueManager.enqueue(player, tauntId, "Test", 15);
-                                        Taunt taunt = TauntDispatcher.getTaunts().getTauntById(tauntId);
-                                        String name = taunt != null ? taunt.getDisplayName() : tauntId;
-                                        Chat.SendAlert(player, "&7Test taunt (queued): &b" + name);
-                                        return 1;
-                                    }
-                                    boolean success = TauntDispatcher.dispatchTaunt(player, tauntId, 5);
-                                    if (success) {
-                                        Taunt taunt = TauntDispatcher.getTaunts().getTauntById(tauntId);
-                                        String name = taunt != null ? taunt.getDisplayName() : tauntId;
-                                        Chat.SendAlert(player, "&7Test taunt: &b" + name);
-                                    } else {
-                                        Chat.SendAlert(player, "&cUnknown taunt: " + tauntId);
-                                    }
-                                    return success ? 1 : 0;
-                                })
+                        // /creati test taunt <id>
+                        .then(Commands.literal("taunt")
+                                .then(Commands.argument("tauntId", StringArgumentType.word())
+                                        .suggests((context, builder) -> {
+                                            for (String id : getAllTauntIds()) {
+                                                builder.suggest(id);
+                                            }
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            String tauntId = StringArgumentType.getString(context, "tauntId");
+                                            if (Config.QUEUE_ENABLED.get()) {
+                                                QueueManager.enqueue(player, tauntId, "Test", 15);
+                                                Taunt taunt = TauntDispatcher.getTaunts().getTauntById(tauntId);
+                                                String name = taunt != null ? taunt.getDisplayName() : tauntId;
+                                                Chat.SendAlert(player, "&7Test taunt (queued): &b" + name);
+                                                return 1;
+                                            }
+                                            boolean success = TauntDispatcher.dispatchTaunt(player, tauntId, 5);
+                                            if (success) {
+                                                Taunt taunt = TauntDispatcher.getTaunts().getTauntById(tauntId);
+                                                String name = taunt != null ? taunt.getDisplayName() : tauntId;
+                                                Chat.SendAlert(player, "&7Test taunt: &b" + name);
+                                            } else {
+                                                Chat.SendAlert(player, "&cUnknown taunt: " + tauntId);
+                                            }
+                                            return success ? 1 : 0;
+                                        })
+                                )
                         )
+                        // /creati test spawn <mob> [amount]
                         .then(Commands.literal("spawn")
-                                
                                 .then(Commands.argument("mobId", StringArgumentType.greedyString())
                                         .suggests((context, builder) -> {
                                             String partial = builder.getRemaining().toLowerCase();
@@ -385,8 +232,8 @@ public class ModCommands {
                                         })
                                 )
                         )
-                        .then(Commands.literal("splash")
-                                
+                        // /creati test potion <effect> [duration] [amplifier]
+                        .then(Commands.literal("potion")
                                 .then(Commands.argument("effectId", StringArgumentType.greedyString())
                                         .suggests((context, builder) -> {
                                             String partial = builder.getRemaining().toLowerCase();
@@ -415,6 +262,165 @@ public class ModCommands {
                                             PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("EFFECT", "", "Test", actualEffectId, 0, ToastIconHelper.getIconForAction("EFFECT", "")));
                                             return 1;
                                         })
+                                )
+                        )
+                        // /creati test minigame <parkour|tntrun|dropper> <start|leave|forceexit>
+                        .then(Commands.literal("minigame")
+                                .then(Commands.literal("parkour")
+                                        .then(Commands.literal("start")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (CreatiIntegration.getParkourMinigame().isInMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are already in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getParkourMinigame().enterPlayer(player, "Dev");
+                                                    return 1;
+                                                })
+                                        )
+                                        .then(Commands.literal("leave")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (!CreatiIntegration.getParkourMinigame().isInActiveMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are not in a parkour session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getParkourMinigame().exitPlayer(player, true);
+                                                    return 1;
+                                                })
+                                        )
+                                        .then(Commands.literal("forceexit")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (!CreatiIntegration.getParkourMinigame().isInMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("No active parkour session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getParkourMinigame().handlePlayerReconnect(player);
+                                                    return 1;
+                                                })
+                                        )
+                                )
+                                .then(Commands.literal("tntrun")
+                                        .then(Commands.literal("start")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (CreatiIntegration.getTntRunMinigame().isInMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are already in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getTntRunMinigame().enterPlayer(player, "Dev");
+                                                    return 1;
+                                                })
+                                        )
+                                        .then(Commands.literal("leave")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (!CreatiIntegration.getTntRunMinigame().isInActiveMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are not in a TNT Run session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getTntRunMinigame().exitPlayer(player, true);
+                                                    return 1;
+                                                })
+                                        )
+                                )
+                                .then(Commands.literal("dropper")
+                                        .then(Commands.literal("start")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are already in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getDropperMinigame().enterPlayer(player, "Dev");
+                                                    return 1;
+                                                })
+                                        )
+                                        .then(Commands.literal("leave")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (!CreatiIntegration.getDropperMinigame().isInActiveMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are not in a Dropper session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getDropperMinigame().exitPlayer(player, true);
+                                                    return 1;
+                                                })
+                                        )
+                                        .then(Commands.literal("forceexit")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (!CreatiIntegration.getDropperMinigame().isInMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("No active Dropper session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getDropperMinigame().handlePlayerReconnect(player);
+                                                    return 1;
+                                                })
+                                        )
+                                )
+                        )
+                        // /creati test notify <type> [name] [redeemer] [position]
+                        .then(Commands.literal("notify")
+                                .then(Commands.argument("type", StringArgumentType.word())
+                                        .suggests((context, builder) -> {
+                                            builder.suggest("GIVE");
+                                            builder.suggest("SPAWN");
+                                            builder.suggest("EFFECT");
+                                            builder.suggest("TAUNT_INSTANT");
+                                            builder.suggest("TAUNT_QUEUED");
+                                            builder.suggest("TAUNT_ACTIVATED");
+                                            builder.suggest("TAUNT_EXTENDED");
+                                            builder.suggest("MINIGAME_QUEUED");
+                                            builder.suggest("MINIGAME_ACTIVATED");
+                                            builder.suggest("VISUAL_EFFECT_QUEUED");
+                                            builder.suggest("VISUAL_EFFECT_ACTIVATED");
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            String type = StringArgumentType.getString(context, "type");
+                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, "tnt", "TestUser", "Test extra info", 0, ToastIconHelper.getIconForTaunt("tnt")));
+                                            player.sendSystemMessage(Component.literal("Sent activity notification: " + type).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                            return 1;
+                                        })
+                                        .then(Commands.argument("name", StringArgumentType.word())
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    String type = StringArgumentType.getString(context, "type");
+                                                    String name = StringArgumentType.getString(context, "name");
+                                                    String icon = ToastIconHelper.getIconForTaunt(name);
+                                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, "TestUser", "", 0, icon));
+                                                    player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                                    return 1;
+                                                })
+                                                .then(Commands.argument("redeemer", StringArgumentType.word())
+                                                        .executes(context -> {
+                                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                                            String type = StringArgumentType.getString(context, "type");
+                                                            String name = StringArgumentType.getString(context, "name");
+                                                            String redeemer = StringArgumentType.getString(context, "redeemer");
+                                                            String icon = ToastIconHelper.getIconForTaunt(name);
+                                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", 0, icon));
+                                                            player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                                            return 1;
+                                                        })
+                                                        .then(Commands.argument("position", IntegerArgumentType.integer(0))
+                                                                .executes(context -> {
+                                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                                    String type = StringArgumentType.getString(context, "type");
+                                                                    String name = StringArgumentType.getString(context, "name");
+                                                                    String redeemer = StringArgumentType.getString(context, "redeemer");
+                                                                    int pos = IntegerArgumentType.getInteger(context, "position");
+                                                                    String icon = ToastIconHelper.getIconForTaunt(name);
+                                                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", pos, icon));
+                                                                    player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer + " #" + pos).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
+                                                                    return 1;
+                                                                })
+                                                        )
+                                                )
+                                        )
                                 )
                         )
                 )
@@ -449,7 +455,9 @@ public class ModCommands {
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test spawn \u00a7f<mobId> [amount]"));
-        player.sendSystemMessage(Component.literal("\u00a77/creati test splash \u00a7f<effectId> [duration] [amplifier]"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test potion \u00a7f<effectId> [duration] [amplifier]"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test minigame \u00a7f<parkour|tntrun|dropper> <start|leave|forceexit>"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test notify \u00a7f<type> [name] [redeemer] [position]"));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
     }
 
@@ -464,7 +472,7 @@ public class ModCommands {
             Component button = Component.literal("[" + displayName + "]")
                     .withStyle(Style.EMPTY
                             .withColor(buttonColor)
-                            .withClickEvent(new ClickEvent.RunCommand("/creati test " + id))
+                            .withClickEvent(new ClickEvent.RunCommand("/creati test taunt " + id))
                             .withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(Component.literal("Click to test: " + id)))
                     );
             buttons.add(button);

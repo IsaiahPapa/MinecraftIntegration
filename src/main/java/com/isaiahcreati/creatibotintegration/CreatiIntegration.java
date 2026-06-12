@@ -85,6 +85,8 @@ public class CreatiIntegration {
         return "development".equals(System.getenv("ENV"));
     }
 
+    private String alertKey;
+
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         try {
@@ -95,11 +97,15 @@ public class CreatiIntegration {
                 url = "wss://alerts.isaiahcreati.com/integration";
             }
 
+            alertKey = Config.ALERT_KEY.get();
             socket = IO.socket(url);
 
             socket.on(Socket.EVENT_CONNECT, args -> {
                 reconnectAttempts = 0;
                 LOGGER.info("Connected to SocketIO");
+                if (alertKey != null && !alertKey.isEmpty()) {
+                    socket.emit("join", alertKey);
+                }
             });
             socket.on(Socket.EVENT_DISCONNECT, args -> {
                 LOGGER.info("Disconnected from SocketIO");
@@ -190,6 +196,11 @@ public class CreatiIntegration {
                     e.printStackTrace();
                 }
             });
+
+            if (Config.AUTO_CONNECT.get() && EventHandler.isConfigSetup()) {
+                socket.connect();
+                LOGGER.info("Auto-connecting to SocketIO...");
+            }
         } catch (Exception e) {
             LOGGER.error("Something errored in SocketIO", e);
             e.printStackTrace();

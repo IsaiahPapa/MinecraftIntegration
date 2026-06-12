@@ -21,12 +21,13 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Boolean> SIDEBAR_VISIBLE;
     public static final ModConfigSpec.ConfigValue<Boolean> ACTIVITY_FEED_VISIBLE;
     public static final ModConfigSpec.ConfigValue<Integer> STAGGER_DELAY_TICKS;
+    public static final ModConfigSpec.ConfigValue<Boolean> AUTO_CONNECT;
     public static final ModConfigSpec.ConfigValue<Boolean> ONBOARDED;
     public static final ModConfigSpec.IntValue CONFIG_VERSION;
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final String CATEGORY_QUEUE = "Queue";
-    public static final int CURRENT_CONFIG_VERSION = 6;
+    public static final int CURRENT_CONFIG_VERSION = 7;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -120,6 +121,10 @@ public class Config {
 
         builder.pop();
 
+        AUTO_CONNECT = builder
+                .comment("Automatically connect to SocketIO when the server starts if an alert key is configured")
+                .define("auto_connect", true);
+
         ONBOARDED = builder
                 .comment("Whether the onboarding setup has been completed")
                 .define("onboarded", false);
@@ -146,6 +151,7 @@ public class Config {
         SIDEBAR_VISIBLE.set(true);
         ACTIVITY_FEED_VISIBLE.set(true);
         STAGGER_DELAY_TICKS.set(20);
+        AUTO_CONNECT.set(true);
         ONBOARDED.set(false);
         CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
     }

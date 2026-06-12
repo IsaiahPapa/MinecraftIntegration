@@ -25,15 +25,11 @@ public class EventHandler {
         if (shown) return;
         if (!(event.getEntity() instanceof Player player)) return;
         if (!event.getLevel().isClientSide()) return;
-        Component message;
         if (isConfigSetup()) {
-            message = Component.literal("[Creati's Integration] Welcome! Start receiving alerts with /start & /stop")
+            Component message = Component.literal("[Creati's Integration] Welcome! Start receiving alerts with /start & /stop")
                     .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF").getOrThrow()));
-        } else {
-            message = Component.literal("[Warning] Creati's Integration not configured!")
-                    .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow()));
+            player.sendSystemMessage(message);
         }
-        player.sendSystemMessage(message);
         shown = true;
     }
 
