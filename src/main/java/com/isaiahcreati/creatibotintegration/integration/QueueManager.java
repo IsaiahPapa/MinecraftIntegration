@@ -4,6 +4,7 @@ import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 
 import com.isaiahcreati.creatibotintegration.helpers.TauntDispatcher;
+import com.isaiahcreati.creatibotintegration.helpers.ToastIconHelper;
 import com.isaiahcreati.creatibotintegration.integration.minigame.Minigame;
 import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
 import com.isaiahcreati.creatibotintegration.network.ClientboundQueueUpdatePacket;
@@ -66,7 +67,7 @@ public class QueueManager {
     public static void enqueue(ServerPlayer player, String tauntId, String redeemerName, int durationSeconds) {
         if (!Config.QUEUE_ENABLED.get()) {
             TauntDispatcher.dispatchTaunt(player, tauntId, durationSeconds);
-            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0));
+            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
             return;
         }
 
@@ -84,37 +85,37 @@ public class QueueManager {
                     activeMinigameRedeemer = null;
                 } else {
                     pauseVisualEffects(player);
-                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_ACTIVATED", tauntId, redeemerName, "", 0));
+                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_ACTIVATED", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
                 }
             } else {
                 QueuedTaunt entry = new QueuedTaunt(tauntId, redeemerName, durationSeconds, currentTick);
                 minigameQueue.add(entry);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_QUEUED", tauntId, redeemerName, "", minigameQueue.size()));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_QUEUED", tauntId, redeemerName, "", minigameQueue.size(), ToastIconHelper.getIconForTaunt(tauntId)));
             }
         } else if (isVisualEffect(tauntId)) {
             if (minigameActive) {
                 QueuedTaunt entry = new QueuedTaunt(tauntId, redeemerName, durationSeconds, currentTick);
                 visualEffectQueue.add(entry);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_QUEUED", tauntId, redeemerName, "", visualEffectQueue.size()));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_QUEUED", tauntId, redeemerName, "", visualEffectQueue.size(), ToastIconHelper.getIconForTaunt(tauntId)));
             } else if (activeVisualEffectId == null && !visualEffectsPaused) {
                 activateVisualEffect(player, tauntId, redeemerName, durationSeconds);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_ACTIVATED", tauntId, redeemerName, "", 0));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_ACTIVATED", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
             } else if (activeVisualEffectId != null && activeVisualEffectId.equals(tauntId)) {
                 extendVisualEffect(player, redeemerName, durationSeconds);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_EXTENDED", tauntId, redeemerName, "", 0));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_EXTENDED", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
             } else {
                 QueuedTaunt entry = new QueuedTaunt(tauntId, redeemerName, durationSeconds, currentTick);
                 visualEffectQueue.add(entry);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_QUEUED", tauntId, redeemerName, "", visualEffectQueue.size()));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_QUEUED", tauntId, redeemerName, "", visualEffectQueue.size(), ToastIconHelper.getIconForTaunt(tauntId)));
             }
         } else {
             if (minigameActive) {
                 QueuedTaunt entry = new QueuedTaunt(tauntId, redeemerName, durationSeconds, currentTick);
                 pendingTaunts.add(entry);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_QUEUED", tauntId, redeemerName, "", pendingTaunts.size()));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_QUEUED", tauntId, redeemerName, "", pendingTaunts.size(), ToastIconHelper.getIconForTaunt(tauntId)));
             } else {
                 TauntDispatcher.dispatchTaunt(player, tauntId, durationSeconds);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
             }
         }
 
@@ -259,7 +260,7 @@ public class QueueManager {
 
         QueuedTaunt taunt = pendingTaunts.pollFirst();
         TauntDispatcher.dispatchTaunt(player, taunt.getTauntId(), taunt.getDurationSeconds());
-        PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_ACTIVATED", taunt.getTauntId(), taunt.getRedeemerName(), "", 0));
+        PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_ACTIVATED", taunt.getTauntId(), taunt.getRedeemerName(), "", 0, ToastIconHelper.getIconForTaunt(taunt.getTauntId())));
 
         staggerDelayTicks = Config.STAGGER_DELAY_TICKS.get();
         broadcastQueueUpdate(player);
@@ -269,7 +270,7 @@ public class QueueManager {
         if (!visualEffectQueue.isEmpty()) {
             QueuedTaunt next = visualEffectQueue.pollFirst();
             activateVisualEffect(player, next.getTauntId(), next.getRedeemerName(), next.getDurationSeconds());
-            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_ACTIVATED", next.getTauntId(), next.getRedeemerName(), "", 0));
+            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("VISUAL_EFFECT_ACTIVATED", next.getTauntId(), next.getRedeemerName(), "", 0, ToastIconHelper.getIconForTaunt(next.getTauntId())));
         }
     }
 
@@ -286,7 +287,7 @@ public class QueueManager {
                 activeMinigameRedeemer = null;
             } else {
                 pauseVisualEffects(player);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_ACTIVATED", next.getTauntId(), next.getRedeemerName(), "", 0));
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_ACTIVATED", next.getTauntId(), next.getRedeemerName(), "", 0, ToastIconHelper.getIconForTaunt(next.getTauntId())));
             }
         }
     }

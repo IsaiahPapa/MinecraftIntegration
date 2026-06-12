@@ -13,6 +13,7 @@ import com.isaiahcreati.creatibotintegration.integration.minigame.Minigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.MinigameEventHandler;
 import com.isaiahcreati.creatibotintegration.integration.minigame.ParkourMinigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.TntRunMinigame;
+import com.isaiahcreati.creatibotintegration.helpers.ToastIconHelper;
 import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
 import com.isaiahcreati.creatibotintegration.network.PacketHandler;
 import com.isaiahcreati.creatibotintegration.screens.ModConfigScreen;
@@ -147,14 +148,16 @@ public class CreatiIntegration {
                                 Item item = Utils.getItemById(itemDetails.itemId);
 
                                 Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 gave you &bx" + itemDetails.amount + " " + item.getName(item.getDefaultInstance()).getString());
-                                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("GIVE", "", payload.metadata.redeemerName, itemDetails.amount + "x " + item.getName(item.getDefaultInstance()).getString(), 0));
+                                String giveIcon = ToastIconHelper.getIconForAction("GIVE", itemDetails.itemId.contains(":") ? itemDetails.itemId : "minecraft:" + itemDetails.itemId);
+                                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("GIVE", "", payload.metadata.redeemerName, itemDetails.amount + "x " + item.getName(item.getDefaultInstance()).getString(), 0, giveIcon));
                                 break;
                             case SPAWN:
                                 if (!(payload.details instanceof SpawnDetails spawnDetails)) break;
                                 Mobs.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount, payload.metadata.redeemerName);
                                 EntityType mob = Mobs.getMobByName(spawnDetails.mobId);
                                 Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 spawned &bx" + spawnDetails.amount + " " + mob.getDescription().getString());
-                                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("SPAWN", "", payload.metadata.redeemerName, spawnDetails.amount + "x " + mob.getDescription().getString(), 0));
+                                String spawnIcon = ToastIconHelper.getIconForAction("SPAWN", spawnDetails.mobId.contains(":") ? spawnDetails.mobId : "minecraft:" + spawnDetails.mobId);
+                                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("SPAWN", "", payload.metadata.redeemerName, spawnDetails.amount + "x " + mob.getDescription().getString(), 0, spawnIcon));
                                 break;
                             case EFFECT:
                                 if (!(payload.details instanceof EffectDetails effectDetails)) break;
@@ -162,19 +165,21 @@ public class CreatiIntegration {
                                 Taunts.applyPotionEffect(player, effectDetails.potionId, effectDetails.duration, effectDetails.amplifier);
                                 Holder<MobEffect> effect = Utils.getPotionEffect(effectDetails.potionId);
                                 Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 splashed you with &b" + effect.value().getDescriptionId() + " " + Chat.NumberToRoman(effectDetails.amplifier + 1) + "!");
-                                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("EFFECT", "", payload.metadata.redeemerName, effect.value().getDescriptionId(), 0));
+                                String effectIcon = ToastIconHelper.getIconForAction("EFFECT", "");
+                                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("EFFECT", "", payload.metadata.redeemerName, effect.value().getDescriptionId(), 0, effectIcon));
                                 break;
                             case TAUNT:
                                 if (!(payload.details instanceof TauntDetails tauntDetails)) break;
                                 Taunt taunt = taunts.getTauntById(tauntDetails.tauntId);
                                 String tauntId = tauntDetails.tauntId;
+                                String tauntIcon = ToastIconHelper.getIconForTaunt(tauntId);
                                 if (Config.QUEUE_ENABLED.get()) {
                                     QueueManager.enqueue(player, tauntId, payload.metadata.redeemerName);
                                 } else {
                                     boolean dispatched = TauntDispatcher.dispatchTaunt(player, tauntId);
                                     if (taunt != null && dispatched) {
                                         Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 taunted you with &b" + taunt.getDisplayName());
-                                        PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, payload.metadata.redeemerName, "", 0));
+                                        PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, payload.metadata.redeemerName, "", 0, tauntIcon));
                                     }
                                 }
                         }

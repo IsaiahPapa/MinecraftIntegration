@@ -117,6 +117,13 @@ public class ModCommands {
                             return 1;
                         })
                 )
+                .then(Commands.literal("debugicon")
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getPlayerOrException();
+                            PacketHandler.sendDebugIconScreen(player);
+                            return 1;
+                        })
+                )
                 .then(Commands.literal("notify")
                         .then(Commands.argument("type", StringArgumentType.word())
                                 .suggests((context, builder) -> {
@@ -136,7 +143,7 @@ public class ModCommands {
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     String type = StringArgumentType.getString(context, "type");
-                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, "tnt", "TestUser", "Test extra info", 0));
+                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, "tnt", "TestUser", "Test extra info", 0, ToastIconHelper.getIconForTaunt("tnt")));
                                     player.sendSystemMessage(Component.literal("Sent activity notification: " + type).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
                                     return 1;
                                 })
@@ -145,7 +152,8 @@ public class ModCommands {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
                                             String type = StringArgumentType.getString(context, "type");
                                             String name = StringArgumentType.getString(context, "name");
-                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, "TestUser", "", 0));
+                                            String icon = ToastIconHelper.getIconForTaunt(name);
+                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, "TestUser", "", 0, icon));
                                             player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
                                             return 1;
                                         })
@@ -155,7 +163,8 @@ public class ModCommands {
                                                     String type = StringArgumentType.getString(context, "type");
                                                     String name = StringArgumentType.getString(context, "name");
                                                     String redeemer = StringArgumentType.getString(context, "redeemer");
-                                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", 0));
+                                                    String icon = ToastIconHelper.getIconForTaunt(name);
+                                                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", 0, icon));
                                                     player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
                                                     return 1;
                                                 })
@@ -166,7 +175,8 @@ public class ModCommands {
                                                             String name = StringArgumentType.getString(context, "name");
                                                             String redeemer = StringArgumentType.getString(context, "redeemer");
                                                             int pos = IntegerArgumentType.getInteger(context, "position");
-                                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", pos));
+                                                            String icon = ToastIconHelper.getIconForTaunt(name);
+                                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(type, name, redeemer, "", pos, icon));
                                                             player.sendSystemMessage(Component.literal("Sent activity notification: " + type + " " + name + " by " + redeemer + " #" + pos).withStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow())));
                                                             return 1;
                                                         })
@@ -343,7 +353,7 @@ public class ModCommands {
                         )
                         .then(Commands.literal("spawn")
                                 
-                                .then(Commands.argument("mobId", StringArgumentType.word())
+                                .then(Commands.argument("mobId", StringArgumentType.greedyString())
                                         .suggests((context, builder) -> {
                                             String partial = builder.getRemaining().toLowerCase();
                                             for (Identifier rl : BuiltInRegistries.ENTITY_TYPE.keySet()) {
@@ -356,25 +366,28 @@ public class ModCommands {
                                         .executes(context -> {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
                                             String mobId = StringArgumentType.getString(context, "mobId");
-                                            Mobs.spawnMobNearPlayer(player, mobId);
-                                            Chat.SendAlert(player, "&7Spawned &b" + mobId);
+                                            String[] parts = mobId.split(" ");
+                                            String actualMobId = parts[0];
+                                            int amount = 1;
+                                            if (parts.length > 1) {
+                                                try { amount = Integer.parseInt(parts[1]); } catch (NumberFormatException e) { amount = 1; }
+                                            }
+                                            Mobs.spawnMobNearPlayer(player, actualMobId, amount, "");
+                                            String mobName = actualMobId;
+                                            var entityType = net.minecraft.world.entity.EntityType.byString(actualMobId);
+                                            if (entityType.isPresent()) {
+                                                mobName = entityType.get().getDescription().getString();
+                                            }
+                                            Chat.SendAlert(player, "&7Spawned &bx" + amount + " " + mobName);
+                                            String icon = ToastIconHelper.getIconForAction("SPAWN", actualMobId.contains(":") ? actualMobId : "minecraft:" + actualMobId);
+                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("SPAWN", "", "Test", amount + "x " + mobName, 0, icon));
                                             return 1;
                                         })
-                                        .then(Commands.argument("amount", IntegerArgumentType.integer(1, 100))
-                                                .executes(context -> {
-                                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                                    String mobId = StringArgumentType.getString(context, "mobId");
-                                                    int amount = IntegerArgumentType.getInteger(context, "amount");
-                                                    Mobs.spawnMobNearPlayer(player, mobId, amount, "");
-                                                    Chat.SendAlert(player, "&7Spawned &bx" + amount + " " + mobId);
-                                                    return 1;
-                                                })
-                                        )
                                 )
                         )
                         .then(Commands.literal("splash")
                                 
-                                .then(Commands.argument("effectId", StringArgumentType.word())
+                                .then(Commands.argument("effectId", StringArgumentType.greedyString())
                                         .suggests((context, builder) -> {
                                             String partial = builder.getRemaining().toLowerCase();
                                             for (Identifier rl : BuiltInRegistries.MOB_EFFECT.keySet()) {
@@ -387,31 +400,21 @@ public class ModCommands {
                                         .executes(context -> {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
                                             String effectId = StringArgumentType.getString(context, "effectId");
-                                            Taunts.applyPotionEffect(player, effectId, 15, 0);
-                                            Chat.SendAlert(player, "&7Splashed &b" + effectId + " &7for &b15s");
+                                            String[] parts = effectId.split(" ");
+                                            String actualEffectId = parts[0];
+                                            int duration = 15;
+                                            int amplifier = 0;
+                                            if (parts.length > 1) {
+                                                try { duration = Integer.parseInt(parts[1]); } catch (NumberFormatException e) { duration = 15; }
+                                            }
+                                            if (parts.length > 2) {
+                                                try { amplifier = Integer.parseInt(parts[2]); } catch (NumberFormatException e) { amplifier = 0; }
+                                            }
+                                            Taunts.applyPotionEffect(player, actualEffectId, duration, amplifier);
+                                            Chat.SendAlert(player, "&7Splashed &b" + actualEffectId + " &7for &b" + duration + "s");
+                                            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("EFFECT", "", "Test", actualEffectId, 0, ToastIconHelper.getIconForAction("EFFECT", "")));
                                             return 1;
                                         })
-                                        .then(Commands.argument("duration", IntegerArgumentType.integer(1, 600))
-                                                .executes(context -> {
-                                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                                    String effectId = StringArgumentType.getString(context, "effectId");
-                                                    int duration = IntegerArgumentType.getInteger(context, "duration");
-                                                    Taunts.applyPotionEffect(player, effectId, duration, 0);
-                                                    Chat.SendAlert(player, "&7Splashed &b" + effectId + " &7for &b" + duration + "s");
-                                                    return 1;
-                                                })
-                                                .then(Commands.argument("amplifier", IntegerArgumentType.integer(0, 255))
-                                                        .executes(context -> {
-                                                            ServerPlayer player = context.getSource().getPlayerOrException();
-                                                            String effectId = StringArgumentType.getString(context, "effectId");
-                                                            int duration = IntegerArgumentType.getInteger(context, "duration");
-                                                            int amplifier = IntegerArgumentType.getInteger(context, "amplifier");
-                                                            Taunts.applyPotionEffect(player, effectId, duration, amplifier);
-                                                            Chat.SendAlert(player, "&7Splashed &b" + effectId + " " + Chat.NumberToRoman(amplifier + 1) + " &7for &b" + duration + "s");
-                                                            return 1;
-                                                        })
-                                                )
-                                        )
                                 )
                         )
                 )
@@ -445,8 +448,8 @@ public class ModCommands {
 
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
-        player.sendSystemMessage(Component.literal("\u00A77/creati test spawn \u00A7f<mobId> [amount]"));
-        player.sendSystemMessage(Component.literal("\u00A77/creati test splash \u00A7f<effectId> [duration] [amplifier]"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test spawn \u00a7f<mobId> [amount]"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test splash \u00a7f<effectId> [duration] [amplifier]"));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
     }
 

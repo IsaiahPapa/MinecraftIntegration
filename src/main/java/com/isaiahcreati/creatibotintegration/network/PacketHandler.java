@@ -42,6 +42,12 @@ public class PacketHandler {
                 ClientboundActivityNotificationPacket.STREAM_CODEC,
                 ClientboundActivityNotificationPacket::handle
         );
+
+        registrar.playToClient(
+                ClientboundOpenDebugIconPacket.TYPE,
+                ClientboundOpenDebugIconPacket.STREAM_CODEC,
+                ClientboundOpenDebugIconPacket::handle
+        );
     }
 
     public static void sendToPlayer(ServerPlayer player, ClientboundTauntEffectPacket packet) {
@@ -70,5 +76,9 @@ public class PacketHandler {
 
     public static void sendToAll(ClientboundActivityNotificationPacket packet) {
         PacketDistributor.sendToAllPlayers(packet);
+    }
+
+    public static void sendDebugIconScreen(ServerPlayer player) {
+        PacketDistributor.sendToPlayer(player, new ClientboundOpenDebugIconPacket());
     }
 }

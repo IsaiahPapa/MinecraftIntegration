@@ -14,15 +14,23 @@ public class ActivityFeedState {
         public final String redeemerName;
         public final String extraInfo;
         public final int queuePosition;
+        public final String iconType;
+        public final String iconId;
         public final long createdAtMs;
 
-        public ActivityToast(String eventType, String tauntId, String redeemerName, String extraInfo, int queuePosition) {
+        public ActivityToast(String eventType, String tauntId, String redeemerName, String extraInfo, int queuePosition, String iconType, String iconId) {
             this.eventType = eventType;
             this.tauntId = tauntId;
             this.redeemerName = redeemerName;
             this.extraInfo = extraInfo;
             this.queuePosition = queuePosition;
+            this.iconType = iconType;
+            this.iconId = iconId;
             this.createdAtMs = System.currentTimeMillis();
+        }
+
+        public ActivityToast(String eventType, String tauntId, String redeemerName, String extraInfo, int queuePosition) {
+            this(eventType, tauntId, redeemerName, extraInfo, queuePosition, "", "");
         }
 
         public long ageMs() {
@@ -30,6 +38,7 @@ public class ActivityFeedState {
         }
 
         public boolean isExpired() {
+            if (debugMode) return false;
             return ageMs() >= TOAST_DURATION_MS;
         }
 
@@ -41,16 +50,43 @@ public class ActivityFeedState {
             return 1.0f - (float)(age - fadeStart) / TOAST_FADE_MS;
         }
 
+        public boolean hasIcon() {
+            return !iconType.isEmpty() && !iconId.isEmpty();
+        }
+
         public String getDisplayName() {
-            return ClientQueueState.getDisplayName(tauntId.isEmpty() ? extraInfo : tauntId);
+            String key = tauntId.isEmpty() ? extraInfo : tauntId;
+            String displayName = ClientQueueState.getDisplayName(key);
+            if (!displayName.equals(key)) return displayName;
+            return resolveDisplayName(key);
+        }
+
+        private static String resolveDisplayName(String key) {
+            if (key.contains(":")) {
+                try {
+                    var itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(net.minecraft.resources.Identifier.tryParse(key));
+                    if (itemId.isPresent()) {
+                        return itemId.get().getDescriptionId();
+                    }
+                    var entityId = net.minecraft.world.entity.EntityType.byString(key);
+                    if (entityId.isPresent()) {
+                        return entityId.get().getDescription().getString();
+                    }
+                } catch (Exception e) {
+                    // fall through
+                }
+            }
+            return key;
         }
     }
 
     private static final List<ActivityToast> toasts = new ArrayList<>();
     private static final int MAX_VISIBLE = 5;
 
-    public static void addNotification(String eventType, String tauntId, String redeemerName, String extraInfo, int queuePosition) {
-        toasts.add(new ActivityToast(eventType, tauntId, redeemerName, extraInfo, queuePosition));
+    public static boolean debugMode = false;
+
+    public static void addNotification(String eventType, String tauntId, String redeemerName, String extraInfo, int queuePosition, String iconType, String iconId) {
+        toasts.add(new ActivityToast(eventType, tauntId, redeemerName, extraInfo, queuePosition, iconType, iconId));
         while (toasts.size() > MAX_VISIBLE + 2) {
             toasts.remove(0);
         }
@@ -58,6 +94,7 @@ public class ActivityFeedState {
 
     public static void tick() {
         toasts.removeIf(ActivityToast::isExpired);
+        ActivityIconCache.tick();
     }
 
     public static List<ActivityToast> getToasts() {
