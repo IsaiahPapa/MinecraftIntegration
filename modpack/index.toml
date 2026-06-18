@@ -12,7 +12,7 @@ metafile = true
 
 [[files]]
 file = "mods/balm.pw.toml"
-hash = "4135f8fbce7e1d7980b846e99cc5bae29b35237934bcc849c14bb647a8a7d4c4"
+hash = "a65aa5970112330dbfce70b769a7e10e20db10a57062a479919408c760cf2ee2"
 metafile = true
 
 [[files]]
@@ -27,12 +27,12 @@ metafile = true
 
 [[files]]
 file = "mods/glitchcore.pw.toml"
-hash = "dccbcf841ba3855f0d7c2394f01fd2b72f1d53bfbb611e6db0cc160d809e4df7"
+hash = "c3dcb27de815cce4aed788e04e77c79d997284f52dac7ccb28e078416e3549f2"
 metafile = true
 
 [[files]]
 file = "mods/irisshaders.pw.toml"
-hash = "0012f1147e0e3abe56854c0b4cb985a4e7fbe3ce1df0f4038286f6c13b91171c"
+hash = "a28102fb8569bff2e47b06ffa9d745214f9e1bbe7e11510d8d6469354a61c62a"
 metafile = true
 
 [[files]]
@@ -47,57 +47,57 @@ metafile = true
 
 [[files]]
 file = "mods/just-zoom.pw.toml"
-hash = "74662e341955aa5c010f48232eef0109589cdab988eb7189c09e43fe62a5e79d"
+hash = "e0182594d0b9b7b429584c705ddbf08c5ddc1bf5b083acc931c05a7fd1d33e90"
 metafile = true
 
 [[files]]
 file = "mods/konkrete.pw.toml"
-hash = "4d33f71c01818e49a3d01210b030c9cc187709f07fd4eb77e78999f8116c43b3"
+hash = "01b7b91829fdaa0283035295e022d76a23e5315cdf74c0926f1670c0135c55f1"
 metafile = true
 
 [[files]]
 file = "mods/modernfix.pw.toml"
-hash = "88d51ea63d58389d9413240c3bcbe1410e0bc69eac66ef5761750421478d4be2"
+hash = "c3e180c132a4bf85fe9d0c05aa1cb12d86c9e35e3356cca8067aca465746b6c9"
 metafile = true
 
 [[files]]
 file = "mods/pipez.pw.toml"
-hash = "54485fe66c1e6300851816c6ad5f18f4d04006f9af374c0e89d5545ba5939a4d"
+hash = "addc65515582f9e39d3dcb0643e4a913345d39c849b62539e430e040c00fe005"
 metafile = true
 
 [[files]]
 file = "mods/shogi.pw.toml"
-hash = "5e92cccb4bb9b4047bb5fd168f726b9b56f586d95185a15e563e3c7a43c54de6"
+hash = "318152da92e9a7a6fbfb5a01254cb7f7713b4ba0d06a76ddd8fcf259223b00eb"
 metafile = true
 
 [[files]]
 file = "mods/sodium.pw.toml"
-hash = "e9c8f2a01fc4f985ce079ee43e39d5ae0126feff4c6f5200d45b64a42a758e94"
+hash = "63ecaa090f6ce2adf07249912b665c408d7c98c04967593a9a661cfddc91fec4"
 metafile = true
 
 [[files]]
 file = "mods/sophisticated-backpacks.pw.toml"
-hash = "aa99adfec55e6867f71e1c4a45c1c192a8c0044fce449659ed1741f9b6f2a027"
+hash = "dd2718c9cf1903c46145f939e4c024211adf40dd7f5f28054300dd84b5b22306"
 metafile = true
 
 [[files]]
 file = "mods/sophisticated-core.pw.toml"
-hash = "5d9a6cf7851d3237197629a3812475b9ae9a5705884bea97927daa8e83e87f71"
+hash = "90af23733985dcd10088d9361ca5d19d8ea076c667478dff96741b102b33a545"
 metafile = true
 
 [[files]]
 file = "mods/terrablender-neoforge.pw.toml"
-hash = "19e288bf4ba6a9d45ba18148244998e3f8503910d3d23928d432ecdbf2c50978"
+hash = "154ad58890603927e127bd63c3af0c62177b125d70a02c33c804ea78a6ec0c75"
 metafile = true
 
 [[files]]
 file = "mods/trashslot.pw.toml"
-hash = "cb8d1e54e543b8ddb81321ea822380c19290e06d9e42a36f4bdf5e3dcb7d19aa"
+hash = "c6fc76a144ee8484bf080167f1896c5f3214e0ac296092cf11339d7769d43193"
 metafile = true
 
 [[files]]
 file = "mods/waystones.pw.toml"
-hash = "98ddda8e66f6ae968b947a610f268e48f483d6426f11e659061b5ade19994829"
+hash = "6c7488f67eba5501f86e7ad689c346597e51b6723f037a8b078768d83f48bb5a"
 metafile = true
 
 [[files]]

@@ -1,13 +1,13 @@
 name = "Konkrete"
-filename = "konkrete_neoforge_1.9.18_MC_1.21.11.jar"
+filename = "konkrete_neoforge_1.10.1_MC_26.1.1.jar"
 side = "both"
 
 [download]
 hash-format = "sha1"
-hash = "0fb6f324e42ba71e8b6d3faa8cb9b65a810fad70"
+hash = "9d7c67fbb015296236dcc56816ae604815721379"
 mode = "metadata:curseforge"
 
 [update]
 [update.curseforge]
-file-id = 7561173
+file-id = 7891762
 project-id = 410295
