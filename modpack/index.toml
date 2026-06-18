@@ -1,6 +1,10 @@
 hash-format = "sha256"
 
 [[files]]
+file = "config/modernfix-mixins.properties"
+hash = "2241a9781a6eddb7b18aabf095dca90edbb6dfeb63764db7104125460b23cee2"
+
+[[files]]
 file = "mods/appleskin.pw.toml"
 hash = "de7c7b5b18ca4d989b40dc3a2d2f6508af2af418558ae4f08af2c2b4635648b1"
 metafile = true
@@ -106,17 +110,13 @@ hash = "5f5fda95689593b78312eeea141d6d3063515c63e3827c53e6baee374ce3b313"
 metafile = true
 
 [[files]]
-file = "overrides/config/modernfix-mixins.properties"
-hash = "2241a9781a6eddb7b18aabf095dca90edbb6dfeb63764db7104125460b23cee2"
-
-[[files]]
-file = "overrides/shaderpacks/ComplementaryReimagined_r5.8.1.zip"
-hash = "3f1cd389e717b2e62f58edff222059b9c60de71b14bb49b517eb58318ce35b15"
-
-[[files]]
 file = "scripts/export-cf.sh"
 hash = "5ca6683dfc3297ba584822b026f6df2af127626764a5696ba42dfb35ce8085db"
 
 [[files]]
 file = "scripts/export-modrinth.sh"
 hash = "8ff52d20d09bf0a8d3e1018711839ef3e30c28e51dd3fa02ab5c0a62e6c57931"
+
+[[files]]
+file = "shaderpacks/ComplementaryReimagined_r5.8.1.zip"
+hash = "3f1cd389e717b2e62f58edff222059b9c60de71b14bb49b517eb58318ce35b15"
