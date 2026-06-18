@@ -4,6 +4,7 @@ import com.isaiahcreati.creatibotintegration.network.ServerboundOnboardingPacket
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -17,8 +18,10 @@ public class OnboardingScreen extends Screen {
     private static final int TEXT_COLOR = 0xFFAAAAAA;
     private static final int HEADER_COLOR = 0xFFFFFFFF;
 
+    private static final int PANEL_HEIGHT = 260;
+
     private int currentPage = 0;
-    private static final int TOTAL_PAGES = 6;
+    private static final int TOTAL_PAGES = 4;
 
     private EditBox alertKeyField;
     private boolean chatAlerts = true;
@@ -30,10 +33,10 @@ public class OnboardingScreen extends Screen {
     private Button backButton;
     private Button closeButton;
     private Button doneButton;
-    private Button toggleChatAlertsButton;
-    private Button toggleMinigamesButton;
-    private Button toggleSidebarButton;
-    private Button toggleActivityFeedButton;
+    private Checkbox checkboxChatAlerts;
+    private Checkbox checkboxMinigames;
+    private Checkbox checkboxSidebar;
+    private Checkbox checkboxActivityFeed;
 
     public OnboardingScreen() {
         super(Component.literal("CreatiBot Setup"));
@@ -46,7 +49,7 @@ public class OnboardingScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
         int panelWidth = Math.min(320, this.width - 40);
-        int panelHeight = Math.min(220, this.height - 40);
+        int panelHeight = Math.min(PANEL_HEIGHT, this.height - 40);
         int panelLeft = centerX - panelWidth / 2;
         int panelTop = centerY - panelHeight / 2;
 
@@ -87,65 +90,58 @@ public class OnboardingScreen extends Screen {
         }).bounds(centerX - 40, bottomY, 80, 20).build();
         this.addRenderableWidget(doneButton);
 
-        toggleChatAlertsButton = Button.builder(
-                Component.literal(chatAlerts ? "\u2714 Yes" : "\u2718 No"),
-                btn -> {
-                    chatAlerts = !chatAlerts;
-                    btn.setMessage(Component.literal(chatAlerts ? "\u2714 Yes" : "\u2718 No"));
-                }
-        ).bounds(centerX - 40, fieldY, 80, 20).build();
-        this.addRenderableWidget(toggleChatAlertsButton);
+        int checkboxX = panelLeft + 60;
+        int checkboxStartY = panelTop + 60;
+        int checkboxSpacing = 22;
 
-        toggleMinigamesButton = Button.builder(
-                Component.literal(minigamesEnabled ? "\u2714 Enabled" : "\u2718 Disabled"),
-                btn -> {
-                    minigamesEnabled = !minigamesEnabled;
-                    btn.setMessage(Component.literal(minigamesEnabled ? "\u2714 Enabled" : "\u2718 Disabled"));
-                }
-        ).bounds(centerX - 50, fieldY + 80, 100, 20).build();
-        this.addRenderableWidget(toggleMinigamesButton);
+        checkboxChatAlerts = Checkbox.builder(Component.literal("Chat Alerts"), this.font)
+                .pos(checkboxX, checkboxStartY)
+                .selected(chatAlerts)
+                .onValueChange((cb, val) -> chatAlerts = val)
+                .build();
+        this.addRenderableWidget(checkboxChatAlerts);
 
-        toggleSidebarButton = Button.builder(
-                Component.literal("Sidebar: " + (sidebarVisible ? "\u2714 Visible" : "\u2718 Hidden")),
-                btn -> {
-                    sidebarVisible = !sidebarVisible;
-                    btn.setMessage(Component.literal("Sidebar: " + (sidebarVisible ? "\u2714 Visible" : "\u2718 Hidden")));
-                }
-        ).bounds(centerX - 80, fieldY + 10, 160, 20).build();
-        this.addRenderableWidget(toggleSidebarButton);
+        checkboxMinigames = Checkbox.builder(Component.literal("Minigames"), this.font)
+                .pos(checkboxX, checkboxStartY + checkboxSpacing)
+                .selected(minigamesEnabled)
+                .onValueChange((cb, val) -> minigamesEnabled = val)
+                .build();
+        this.addRenderableWidget(checkboxMinigames);
 
-        toggleActivityFeedButton = Button.builder(
-                Component.literal("Activity Feed: " + (activityFeedVisible ? "\u2714 Visible" : "\u2718 Hidden")),
-                btn -> {
-                    activityFeedVisible = !activityFeedVisible;
-                    btn.setMessage(Component.literal("Activity Feed: " + (activityFeedVisible ? "\u2714 Visible" : "\u2718 Hidden")));
-                }
-        ).bounds(centerX - 80, fieldY + 40, 160, 20).build();
-        this.addRenderableWidget(toggleActivityFeedButton);
+        checkboxSidebar = Checkbox.builder(Component.literal("Queue Sidebar"), this.font)
+                .pos(checkboxX, checkboxStartY + checkboxSpacing * 2)
+                .selected(sidebarVisible)
+                .onValueChange((cb, val) -> sidebarVisible = val)
+                .build();
+        this.addRenderableWidget(checkboxSidebar);
+
+        checkboxActivityFeed = Checkbox.builder(Component.literal("Activity Feed"), this.font)
+                .pos(checkboxX, checkboxStartY + checkboxSpacing * 3)
+                .selected(activityFeedVisible)
+                .onValueChange((cb, val) -> activityFeedVisible = val)
+                .build();
+        this.addRenderableWidget(checkboxActivityFeed);
 
         updateVisibility();
     }
 
     private void updateVisibility() {
         alertKeyField.setVisible(currentPage == 1);
-        if (currentPage == 1) {
-            alertKeyField.setFocused(true);
-        } else {
-            alertKeyField.setFocused(false);
-        }
+        alertKeyField.setFocused(currentPage == 1);
 
         boolean hasBack = currentPage > 0;
         nextButton.visible = currentPage < TOTAL_PAGES - 1;
         backButton.visible = hasBack;
         doneButton.visible = currentPage == TOTAL_PAGES - 1;
-        toggleChatAlertsButton.visible = currentPage == 2;
-        toggleMinigamesButton.visible = currentPage == 3;
-        toggleSidebarButton.visible = currentPage == 4;
-        toggleActivityFeedButton.visible = currentPage == 4;
+
+        boolean prefsPage = currentPage == 2;
+        checkboxChatAlerts.visible = prefsPage;
+        checkboxMinigames.visible = prefsPage;
+        checkboxSidebar.visible = prefsPage;
+        checkboxActivityFeed.visible = prefsPage;
 
         int centerX = this.width / 2;
-        int panelWidth = Math.min(320, this.width - 40);
-        int panelHeight = Math.min(220, this.height - 40);
+        int panelHeight = Math.min(PANEL_HEIGHT, this.height - 40);
         int panelTop = this.height / 2 - panelHeight / 2;
         int bottomY = panelTop + panelHeight - 30;
 
@@ -179,7 +175,7 @@ public class OnboardingScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
         int panelWidth = Math.min(320, this.width - 40);
-        int panelHeight = Math.min(220, this.height - 40);
+        int panelHeight = Math.min(PANEL_HEIGHT, this.height - 40);
         int panelLeft = centerX - panelWidth / 2;
         int panelTop = centerY - panelHeight / 2;
 
@@ -194,7 +190,7 @@ public class OnboardingScreen extends Screen {
 
         int centerX = this.width / 2;
         int panelWidth = Math.min(320, this.width - 40);
-        int panelHeight = Math.min(220, this.height - 40);
+        int panelHeight = Math.min(PANEL_HEIGHT, this.height - 40);
         int panelLeft = centerX - panelWidth / 2;
         int panelTop = this.height / 2 - panelHeight / 2;
         int textY = panelTop + 20;
@@ -205,11 +201,9 @@ public class OnboardingScreen extends Screen {
             case 1 -> renderPage1(graphics, centerX, textY, textWidth);
             case 2 -> renderPage2(graphics, centerX, textY, textWidth);
             case 3 -> renderPage3(graphics, centerX, textY, textWidth);
-            case 4 -> renderPage4(graphics, centerX, textY, textWidth);
-            case 5 -> renderPage5(graphics, centerX, textY, textWidth);
         }
 
-        renderPaginationDots(graphics, centerX, panelTop + panelHeight - 50, panelWidth);
+        renderPaginationDots(graphics, centerX, panelTop + panelHeight - 42);
     }
 
     private void renderCenteredText(GuiGraphicsExtractor graphics, String text, int centerX, int y, int color, boolean shadow) {
@@ -236,31 +230,17 @@ public class OnboardingScreen extends Screen {
     }
 
     private void renderPage2(GuiGraphicsExtractor graphics, int centerX, int y, int width) {
-        renderCenteredText(graphics, "Chat Alerts", centerX, y, ACCENT_COLOR, true);
-        renderCenteredWordWrap(graphics, Component.literal("Would you like to see chat notifications when events happen? These alert you when viewers trigger taunts or interact with the bot.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA").getOrThrow())), centerX, y + 16, width, TEXT_COLOR);
+        renderCenteredText(graphics, "Preferences", centerX, y, ACCENT_COLOR, true);
+        renderCenteredWordWrap(graphics, Component.literal("Customize your experience \u2014 you can change these anytime via /creati setup.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA").getOrThrow())), centerX, y + 16, width, TEXT_COLOR);
     }
 
     private void renderPage3(GuiGraphicsExtractor graphics, int centerX, int y, int width) {
-        renderCenteredText(graphics, "Minigames", centerX, y, ACCENT_COLOR, true);
-        renderCenteredWordWrap(graphics, Component.literal("Minigames are special challenges triggered by stream viewers. Players are teleported to an arena and must complete an objective to escape.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA").getOrThrow())), centerX, y + 16, width, TEXT_COLOR);
-
-        renderCenteredText(graphics, "\u00A76Parkour \u00A77\u2014 Jump across platforms to the finish.", centerX, y + 50, TEXT_COLOR, false);
-        renderCenteredText(graphics, "\u00A74TNT Run \u00A77\u2014 Survive on crumbling floors.", centerX, y + 65, TEXT_COLOR, false);
-        renderCenteredText(graphics, "\u00A79Dropper \u00A77\u2014 Fall through a tube and land in water.", centerX, y + 80, TEXT_COLOR, false);
-    }
-
-    private void renderPage4(GuiGraphicsExtractor graphics, int centerX, int y, int width) {
-        renderCenteredText(graphics, "Queue Display", centerX, y, ACCENT_COLOR, true);
-        renderCenteredWordWrap(graphics, Component.literal("Customize how queue information is shown on your screen.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA").getOrThrow())), centerX, y + 16, width, TEXT_COLOR);
-    }
-
-    private void renderPage5(GuiGraphicsExtractor graphics, int centerX, int y, int width) {
         renderCenteredText(graphics, "All Set!", centerX, y, ACCENT_COLOR, true);
         renderCenteredWordWrap(graphics, Component.literal("You're configured and ready to go! You can always re-run /creati setup to change settings, or use the full config screen for advanced options.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA").getOrThrow())), centerX, y + 16, width, TEXT_COLOR);
         renderCenteredText(graphics, "Have fun streaming!", centerX, y + 70, HEADER_COLOR, false);
     }
 
-    private void renderPaginationDots(GuiGraphicsExtractor graphics, int centerX, int y, int panelWidth) {
+    private void renderPaginationDots(GuiGraphicsExtractor graphics, int centerX, int y) {
         int dotSpacing = 12;
         int totalWidth = (TOTAL_PAGES - 1) * dotSpacing;
         int startX = centerX - totalWidth / 2;
