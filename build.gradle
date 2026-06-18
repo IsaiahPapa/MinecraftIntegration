@@ -1,7 +1,6 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'net.neoforged.moddev' version '2.0.141'
     id "com.matthewprenger.cursegradle" version "1.4.0"
 }
@@ -123,17 +122,6 @@ tasks.withType(ProcessResources).configureEach {
         expand replaceProperties
     }
 }
-
-shadowJar {
-    archiveClassifier = 'shadow'
-    configurations = [project.configurations.jarJar]
-    relocate 'io.socket', "${project.group}.shadow.io.socket"
-}
-// shadowJar is not used for publishing: the NeoForge jarJar mechanism already
-// bundles socket.io-client into the slim jar (META-INF/jarjar/). The shadow
-// plugin's bundled ASM cannot read Java 25 class files (major version 69),
-// so relocating project classes fails. Keep the task registered but don't
-// wire it into assemble or publishing.
 
 jar {
     archiveClassifier = ''
