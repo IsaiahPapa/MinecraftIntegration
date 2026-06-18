@@ -21,7 +21,8 @@ public record ClientboundQueueUpdatePacket(
         int activeVisualEffectRemainingSeconds,
         int activeVisualEffectDurationSeconds,
         int pausedEffectRemainingSeconds,
-        int pendingTauntsCount
+        int pendingTauntsCount,
+        int safeModeRemainingSeconds
 ) implements CustomPacketPayload {
 
     public static final Type<ClientboundQueueUpdatePacket> TYPE =
@@ -41,6 +42,7 @@ public record ClientboundQueueUpdatePacket(
                 buf.readVarInt(),
                 buf.readVarInt(),
                 buf.readVarInt(),
+                buf.readVarInt(),
                 buf.readVarInt()
         );
     }
@@ -56,6 +58,7 @@ public record ClientboundQueueUpdatePacket(
         buf.writeVarInt(packet.activeVisualEffectDurationSeconds());
         buf.writeVarInt(packet.pausedEffectRemainingSeconds());
         buf.writeVarInt(packet.pendingTauntsCount());
+        buf.writeVarInt(packet.safeModeRemainingSeconds());
     }
 
     private static List<QueueEntry> readQueueEntries(RegistryFriendlyByteBuf buf) {

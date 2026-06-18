@@ -10,6 +10,10 @@ public class ShaderManager {
     public static final Identifier BLUR = Identifier.withDefaultNamespace("blur");
     public static final Identifier BLACK_AND_WHITE = Identifier.fromNamespaceAndPath(CreatiIntegration.MODID, "black_and_white");
     public static final Identifier CRT = Identifier.fromNamespaceAndPath(CreatiIntegration.MODID, "crt");
+    public static final Identifier LSD = Identifier.fromNamespaceAndPath(CreatiIntegration.MODID, "lsd");
+    public static final Identifier PIXELATE = Identifier.fromNamespaceAndPath(CreatiIntegration.MODID, "pixelate");
+    public static final Identifier MIRROR = Identifier.fromNamespaceAndPath(CreatiIntegration.MODID, "mirror");
+    public static final Identifier FISHEYE = Identifier.fromNamespaceAndPath(CreatiIntegration.MODID, "fisheye");
 
     private static Identifier activeShaderId = null;
 

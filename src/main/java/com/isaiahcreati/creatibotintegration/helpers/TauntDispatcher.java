@@ -51,10 +51,18 @@ public class TauntDispatcher {
             case "bury"           -> Taunts.buryPlayer(player);
             case "curse_gear"     -> Taunts.curseGear(player);
             case "stack_one"      -> Taunts.reduceStacksToOne(player);
+            case "mob_army"       -> Taunts.spawnMobArmy(player);
+            case "anvil_rain"    -> Taunts.anvilRain(player);
+            case "blind_noise"   -> Taunts.blindNoise(player);
+            case "rename_chat"   -> Taunts.renameChat(player);
+            case "hot_potato"    -> Taunts.hotPotato(player);
+            case "lucky_block"   -> Taunts.luckyBlock(player);
             case "fov_quake", "fov_zoom", "upside_down", "rolling_camera", "camera_tilt",
                  "pumpkin_view", "dvd",
                  "inverted_controls", "mouse_drifting",
-                 "blur", "inverted_colors", "black_and_white", "lsd", "crt" ->
+                 "blur", "inverted_colors", "black_and_white", "lsd", "crt",
+                 "drunk", "vignette_heartbeat",
+                 "pixelate", "mirror", "fisheye" ->
                 PacketHandler.sendToPlayer(player, new ClientboundTauntEffectPacket(tauntId, clientEffectDuration));
             default -> {
                 return false;

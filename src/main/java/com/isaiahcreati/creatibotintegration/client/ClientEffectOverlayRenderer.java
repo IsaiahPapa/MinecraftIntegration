@@ -13,6 +13,7 @@ public class ClientEffectOverlayRenderer {
 
     public static final Identifier PUMPKIN_OVERLAY_ID = Identifier.fromNamespaceAndPath("creatibotintegration", "pumpkin_overlay");
     public static final Identifier DVD_OVERLAY_ID = Identifier.fromNamespaceAndPath("creatibotintegration", "dvd_overlay");
+    public static final Identifier VIGNETTE_HEARTBEAT_OVERLAY_ID = Identifier.fromNamespaceAndPath("creatibotintegration", "vignette_heartbeat");
 
     public static void renderPumpkinOverlay(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
         if (ClientEffectState.pumpkinViewActive) {
@@ -44,5 +45,21 @@ public class ClientEffectOverlayRenderer {
         guiGraphics.fill(left - border, bottom, right + border, bottom + border, borderColor);
         guiGraphics.fill(left - border, top, left, bottom + border, borderColor);
         guiGraphics.fill(right, top - border, right + border, bottom + border, borderColor);
+    }
+
+    public static void renderVignetteHeartbeat(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
+        if (!ClientEffectState.vignetteHeartbeatActive) return;
+
+        int width = guiGraphics.guiWidth();
+        int height = guiGraphics.guiHeight();
+        int thickness = 30;
+        float alpha = 0.30f + 0.40f * (0.5f + 0.5f * (float) Math.sin(ClientEffectState.vignetteHeartbeatPhase * 2.0f));
+        int a = (int) (alpha * 255.0f) & 0xFF;
+        int color = (a << 24) | 0xFF0000;
+
+        guiGraphics.fill(0, 0, width, thickness, color);
+        guiGraphics.fill(0, height - thickness, width, height, color);
+        guiGraphics.fill(0, 0, thickness, height, color);
+        guiGraphics.fill(width - thickness, 0, width, height, color);
     }
 }

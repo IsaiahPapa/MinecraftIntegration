@@ -38,6 +38,14 @@ public class ClientEffectState {
     public static float mouseDriftY = 0f;
     public static long mouseDriftingExpiryTick = 0;
 
+    public static boolean drunkActive = false;
+    public static long drunkExpiryTick = 0;
+    public static float drunkPhase = 0f;
+
+    public static boolean vignetteHeartbeatActive = false;
+    public static long vignetteHeartbeatExpiryTick = 0;
+    public static float vignetteHeartbeatPhase = 0f;
+
     private static final Map<String, Long> activeEffects = new HashMap<>();
 
     private static final Map<String, Long> pausedEffects = new HashMap<>();
@@ -78,6 +86,8 @@ public class ClientEffectState {
         cameraRollSpeed = 0f;
         invertedControls = false;
         mouseDrifting = false;
+        drunkActive = false;
+        vignetteHeartbeatActive = false;
         activeEffects.clear();
     }
 
@@ -116,5 +126,11 @@ public class ClientEffectState {
         mouseDriftX = 0f;
         mouseDriftY = 0f;
         mouseDriftingExpiryTick = 0;
+        drunkActive = false;
+        drunkExpiryTick = 0;
+        drunkPhase = 0f;
+        vignetteHeartbeatActive = false;
+        vignetteHeartbeatExpiryTick = 0;
+        vignetteHeartbeatPhase = 0f;
     }
 }

@@ -16,15 +16,17 @@ public class ScoreboardOverlayRenderer {
             Identifier.fromNamespaceAndPath("creatibotintegration", "queue_overlay");
 
     public static void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
-        if (!Config.SIDEBAR_VISIBLE.get()) return;
-        if (!ClientQueueState.hasAnythingQueued()) return;
-
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
         Font font = mc.font;
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
+
+        SafeModeHud.render(guiGraphics, font, screenWidth, screenHeight);
+
+        if (!Config.SIDEBAR_VISIBLE.get()) return;
+        if (!ClientQueueState.hasAnythingQueued()) return;
 
         int y = 0;
         int boxWidth = 120;

@@ -1,6 +1,7 @@
 package com.isaiahcreati.creatibotintegration.integration;
 
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
+import com.isaiahcreati.creatibotintegration.helpers.Mobs;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -44,6 +45,7 @@ import java.util.Set;
 
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.LivingEntity;
 
 public class Taunts {
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -79,6 +81,17 @@ public class Taunts {
         taunts.put("bury", new Taunt("bury", "Buried Alive"));
         taunts.put("curse_gear", new Taunt("curse_gear", "Cursed!"));
         taunts.put("stack_one", new Taunt("stack_one", "Stack of One"));
+        taunts.put("mob_army", new Taunt("mob_army", "Mob Army"));
+        taunts.put("anvil_rain", new Taunt("anvil_rain", "Anvil Rain"));
+        taunts.put("blind_noise", new Taunt("blind_noise", "Blind Panic"));
+        taunts.put("rename_chat", new Taunt("rename_chat", "Rename the Streamer"));
+        taunts.put("hot_potato", new Taunt("hot_potato", "Hot Potato"));
+        taunts.put("lucky_block", new Taunt("lucky_block", "Lucky Block"));
+        taunts.put("drunk", new Taunt("drunk", "Drunk Streamer"));
+        taunts.put("vignette_heartbeat", new Taunt("vignette_heartbeat", "Heartbeat"));
+        taunts.put("pixelate", new Taunt("pixelate", "PS1 Aesthetic"));
+        taunts.put("mirror", new Taunt("mirror", "Mirror World"));
+        taunts.put("fisheye", new Taunt("fisheye", "Fisheye"));
         taunts.put("fov_quake", new Taunt("fov_quake", "Quake FOV"));
         taunts.put("fov_zoom", new Taunt("fov_zoom", "Ultra Zoom"));
         taunts.put("upside_down", new Taunt("upside_down", "Upside Down"));
@@ -428,5 +441,294 @@ public class Taunts {
     }
 
     public static void randomizeMovementTemporarily(ServerPlayer player){
+    }
+
+    public static void spawnMobArmy(ServerPlayer player) {
+        ServerLevel level = (ServerLevel) player.level();
+        String[] hostileTypes = {"minecraft:zombie", "minecraft:skeleton", "minecraft:spider",
+                "minecraft:creeper", "minecraft:witch", "minecraft:enderman"};
+        String chosen = hostileTypes[rand.nextInt(hostileTypes.length)];
+        EntityType<?> type = Utils.getEntityTypeByName(chosen);
+        if (type == null) return;
+
+        int count = 8 + rand.nextInt(8);
+        for (int i = 0; i < count; i++) {
+            double angle = (Math.PI * 2 * i) / count;
+            double radius = 3.5 + rand.nextDouble() * 1.5;
+            double x = player.getX() + Math.cos(angle) * radius;
+            double z = player.getZ() + Math.sin(angle) * radius;
+            double y = player.getY();
+
+            Entity entity = type.create(level, EntitySpawnReason.EVENT);
+            if (entity == null) continue;
+            entity.setPos(x, y, z);
+            if (entity instanceof Mob mob) {
+                mob.finalizeSpawn(level, level.getCurrentDifficultyAt(entity.blockPosition()), EntitySpawnReason.EVENT, null);
+                if (mob instanceof net.minecraft.world.entity.monster.Monster monster) {
+                    monster.setTarget(player);
+                }
+            }
+            level.addFreshEntity(entity);
+        }
+        level.playSound(null, player.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 0.6F, 0.8F);
+    }
+
+    public static void anvilRain(ServerPlayer player) {
+        ServerLevel level = (ServerLevel) player.level();
+        int count = 6;
+        for (int i = 0; i < count; i++) {
+            int delay = i * 12;
+            int dropIndex = i;
+            level.getServer().executeIfPossible(new net.minecraft.server.TickTask(level.getServer().getTickCount() + delay, () -> {
+                double ox = (rand.nextDouble() - 0.5) * 6;
+                double oz = (rand.nextDouble() - 0.5) * 6;
+                BlockPos pos = new BlockPos((int)(player.getBlockX() + ox), player.getBlockY() + 8, (int)(player.getBlockZ() + oz));
+                FallingBlockEntity anvil = FallingBlockEntity.fall(level, pos, Blocks.ANVIL.defaultBlockState());
+                anvil.setHurtsEntities(2.0F, 40);
+                level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 0.4F, 1.5F);
+            }));
+        }
+    }
+
+    public static void blindNoise(ServerPlayer player) {
+        applyPotionEffect(player, "minecraft:blindness", 3, 1);
+        ServerLevel level = (ServerLevel) player.level();
+        for (int i = 0; i < 6; i++) {
+            int delay = 4 + rand.nextInt(7);
+            level.getServer().executeIfPossible(new net.minecraft.server.TickTask(level.getServer().getTickCount() + delay, () -> {
+                player.level().playSound(null, player.blockPosition(),
+                        SoundEvents.CREEPER_PRIMED, SoundSource.HOSTILE, 1.0F, 1.0F);
+            }));
+        }
+    }
+
+    public static final record RenameState(String name, long expiryTick) {}
+    private static final Map<java.util.UUID, RenameState> activeRenames = new HashMap<>();
+    private static final String[] SILLY_NAMES = {
+            "Suspicious Steve", "A Very Lost Pig", "Definitely Not The Streamer", "Greg",
+            "The Imposter", "A Suspicious Llama", "Creeper In A Trenchcoat", "Villager #42"
+    };
+
+    public static void renameChat(ServerPlayer player) {
+        String name = SILLY_NAMES[rand.nextInt(SILLY_NAMES.length)];
+        long expiryTick = player.level().getServer().getTickCount() + (60 * 20L);
+        activeRenames.put(player.getUUID(), new RenameState(name, expiryTick));
+        player.level().playSound(null, player.blockPosition(),
+                SoundEvents.VILLAGER_AMBIENT, SoundSource.PLAYERS, 1.0F, 1.2F);
+    }
+
+    public static RenameState getActiveRename(java.util.UUID uuid, long currentTick) {
+        RenameState state = activeRenames.get(uuid);
+        if (state == null) return null;
+        if (currentTick >= state.expiryTick()) {
+            activeRenames.remove(uuid);
+            return null;
+        }
+        return state;
+    }
+
+    public static void tickRenames() {
+        if (activeRenames.isEmpty()) return;
+        long currentTick = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer() != null
+                ? net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().getTickCount() : -1;
+        if (currentTick < 0) return;
+        activeRenames.entrySet().removeIf(e -> currentTick >= e.getValue().expiryTick());
+    }
+
+    private static final Map<java.util.UUID, Long> hotPotatoDeadlines = new HashMap<>();
+    private static final Map<java.util.UUID, Integer> hotPotatoLastShownSecond = new HashMap<>();
+
+    public static void hotPotato(ServerPlayer player) {
+        ItemStack potato = new ItemStack(Items.BAKED_POTATO);
+        potato.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.network.chat.Component.literal("HOT POTATO")
+                        .withStyle(net.minecraft.ChatFormatting.RED));
+        potato.set(net.minecraft.core.component.DataComponents.LORE,
+                new net.minecraft.world.item.component.ItemLore(java.util.List.of(
+                        net.minecraft.network.chat.Component.literal("Drop me or you'll explode!").withStyle(net.minecraft.ChatFormatting.YELLOW),
+                        net.minecraft.network.chat.Component.literal("Or eat me to defuse it...").withStyle(net.minecraft.ChatFormatting.GRAY)
+                )));
+        potato.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, Boolean.TRUE);
+
+        var data = potato.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        net.minecraft.world.item.component.CustomData customData;
+        if (data != null) {
+            customData = data;
+        } else {
+            customData = net.minecraft.world.item.component.CustomData.EMPTY;
+        }
+        final net.minecraft.world.item.component.CustomData finalData = customData.update(tag -> {
+            tag.putBoolean("creatibotintegration.hot_potato", true);
+        });
+        potato.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, finalData);
+
+        if (!player.getInventory().add(potato)) {
+            player.drop(potato, false);
+        }
+        long deadline = player.level().getServer().getTickCount() + 100;
+        hotPotatoDeadlines.put(player.getUUID(), deadline);
+        hotPotatoLastShownSecond.remove(player.getUUID());
+        player.level().playSound(null, player.blockPosition(),
+                SoundEvents.TNT_PRIMED, SoundSource.HOSTILE, 1.0F, 1.2F);
+    }
+
+    public static void tickHotPotatoes() {
+        if (hotPotatoDeadlines.isEmpty()) return;
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        long currentTick = server.getTickCount();
+        var it = hotPotatoDeadlines.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            var player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player == null) continue;
+            long deadline = entry.getValue();
+            boolean stillHasPotato = false;
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack stack = player.getInventory().getItem(i);
+                if (stack.isEmpty() || stack.getItem() != Items.BAKED_POTATO) continue;
+                var cd = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+                if (cd == null) continue;
+                if (cd.contains("creatibotintegration.hot_potato")) {
+                    stillHasPotato = true;
+                    break;
+                }
+            }
+            if (!stillHasPotato) {
+                it.remove();
+                hotPotatoLastShownSecond.remove(entry.getKey());
+                continue;
+            }
+            long secondsLeft = (deadline - currentTick) / 20L;
+            int lastShown = hotPotatoLastShownSecond.getOrDefault(entry.getKey(), -1);
+            if (secondsLeft != lastShown && secondsLeft >= 0) {
+                player.sendSystemMessage(
+                        net.minecraft.network.chat.Component.literal("HOT POTATO: " + secondsLeft + "s — DROP IT!")
+                                .withStyle(net.minecraft.ChatFormatting.RED),
+                        true);
+                hotPotatoLastShownSecond.put(entry.getKey(), (int) secondsLeft);
+            }
+            if (currentTick >= deadline) {
+                PrimedTnt tnt = new PrimedTnt(player.level(), player.getX(), player.getY(), player.getZ(), player);
+                tnt.setFuse(0);
+                player.level().addFreshEntity(tnt);
+                player.level().playSound(null, player.blockPosition(),
+                        SoundEvents.TNT_PRIMED, SoundSource.HOSTILE, 1.0F, 1.0F);
+                it.remove();
+                hotPotatoLastShownSecond.remove(entry.getKey());
+            }
+        }
+    }
+
+    public static void clearHotPotatoOnDeath(ServerPlayer player) {
+        var deadline = hotPotatoDeadlines.remove(player.getUUID());
+        hotPotatoLastShownSecond.remove(player.getUUID());
+        if (deadline == null) return;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (stack.isEmpty() || stack.getItem() != Items.BAKED_POTATO) continue;
+            var cd = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+            if (cd == null) continue;
+            if (cd.contains("creatibotintegration.hot_potato")) {
+                player.getInventory().removeItem(i, stack.getCount());
+            }
+        }
+        player.inventoryMenu.broadcastChanges();
+        player.level().playSound(null, player.blockPosition(),
+                SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 1.2F);
+    }
+
+    private static final java.util.Set<BlockPos> luckyBlocks = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+    private static final Map<BlockPos, Long> luckyBlockPlacedTick = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void luckyBlock(ServerPlayer player) {
+        ItemStack block = new ItemStack(Items.SPONGE);
+        block.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.network.chat.Component.literal("Lucky Block")
+                        .withStyle(net.minecraft.ChatFormatting.GOLD));
+        block.set(net.minecraft.core.component.DataComponents.LORE,
+                new net.minecraft.world.item.component.ItemLore(java.util.List.of(
+                        net.minecraft.network.chat.Component.literal("Place and break for a surprise!").withStyle(net.minecraft.ChatFormatting.YELLOW)
+                )));
+        block.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, Boolean.TRUE);
+
+        var data = block.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        net.minecraft.world.item.component.CustomData customData = (data != null) ? data : net.minecraft.world.item.component.CustomData.EMPTY;
+        final net.minecraft.world.item.component.CustomData finalData = customData.update(tag -> {
+            tag.putBoolean("creatibotintegration.lucky_block", true);
+        });
+        block.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, finalData);
+
+        if (!player.getInventory().add(block)) {
+            player.drop(block, false);
+        }
+        player.inventoryMenu.broadcastChanges();
+        player.level().playSound(null, player.blockPosition(),
+                SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
+    }
+
+    public static boolean isLuckyBlockItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || stack.getItem() != Items.SPONGE) return false;
+        var cd = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        return cd != null && cd.contains("creatibotintegration.lucky_block");
+    }
+
+    public static void registerPlacedLuckyBlock(ServerLevel level, BlockPos pos) {
+        luckyBlocks.add(pos);
+        luckyBlockPlacedTick.put(pos, (long) level.getServer().getTickCount());
+        level.playSound(null, pos, Blocks.SPONGE.defaultBlockState().getSoundType().getPlaceSound(),
+                SoundSource.BLOCKS, 1.0F, 1.0F);
+    }
+
+    public static void tickLuckyBlocks() {
+        if (luckyBlockPlacedTick.isEmpty()) return;
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        long currentTick = server.getTickCount();
+        long expiryTicks = 10 * 60 * 20L;
+        var it = luckyBlockPlacedTick.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            if (currentTick - entry.getValue() > expiryTicks) {
+                luckyBlocks.remove(entry.getKey());
+                it.remove();
+            }
+        }
+    }
+
+    public static boolean isLuckyBlock(BlockPos pos) {
+        return luckyBlocks.contains(pos);
+    }
+
+    public static void onLuckyBlockBroken(ServerPlayer player, BlockPos pos) {
+        luckyBlocks.remove(pos);
+        luckyBlockPlacedTick.remove(pos);
+        ServerLevel level = (ServerLevel) player.level();
+        int roll = rand.nextInt(100);
+        if (roll < 25) {
+            ItemStack loot = new ItemStack(Items.DIAMOND, 3);
+            ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, loot);
+            level.addFreshEntity(drop);
+            level.playSound(null, pos, SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
+        } else if (roll < 45) {
+            String[] hostile = {"minecraft:zombie", "minecraft:skeleton", "minecraft:creeper"};
+            Mobs.spawnMobNearPlayer(player, hostile[rand.nextInt(hostile.length)], 1, "");
+            level.playSound(null, pos, SoundEvents.ENDERMAN_SCREAM, SoundSource.HOSTILE, 1.0F, 1.0F);
+        } else if (roll < 65) {
+            String[] good = {"minecraft:regeneration", "minecraft:strength"};
+            applyPotionEffect(player, good[rand.nextInt(good.length)], 15, 1);
+            level.playSound(null, pos, SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
+        } else if (roll < 85) {
+            String[] bad = {"minecraft:poison", "minecraft:weakness"};
+            applyPotionEffect(player, bad[rand.nextInt(bad.length)], 10, 1);
+            level.playSound(null, pos, SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 0.8F, 1.0F);
+        } else if (roll < 95) {
+            PrimedTnt tnt = new PrimedTnt(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, player);
+            tnt.setFuse(40);
+            level.addFreshEntity(tnt);
+            level.playSound(null, pos, SoundEvents.TNT_PRIMED, SoundSource.HOSTILE, 1.0F, 1.0F);
+        } else {
+            level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+        }
     }
 }

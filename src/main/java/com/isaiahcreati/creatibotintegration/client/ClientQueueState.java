@@ -19,6 +19,7 @@ public class ClientQueueState {
     public static int activeVisualEffectDurationSeconds = 0;
     public static int pausedEffectRemainingSeconds = 0;
     public static int pendingTauntsCount = 0;
+    public static int safeModeRemainingSeconds = 0;
 
     public static void updateFromPacket(ClientboundQueueUpdatePacket packet) {
         minigameQueue = new ArrayList<>(packet.minigameQueue());
@@ -31,6 +32,7 @@ public class ClientQueueState {
         activeVisualEffectDurationSeconds = packet.activeVisualEffectDurationSeconds();
         pausedEffectRemainingSeconds = packet.pausedEffectRemainingSeconds();
         pendingTauntsCount = packet.pendingTauntsCount();
+        safeModeRemainingSeconds = packet.safeModeRemainingSeconds();
     }
 
     public static boolean hasAnythingQueued() {
@@ -52,6 +54,11 @@ public class ClientQueueState {
             case "black_and_white" -> "1950s";
             case "lsd" -> "Lucy In The Sky";
             case "crt" -> "Monitor Downgrade";
+            case "drunk" -> "Drunk Streamer";
+            case "vignette_heartbeat" -> "Heartbeat";
+            case "pixelate" -> "PS1 Aesthetic";
+            case "mirror" -> "Mirror World";
+            case "fisheye" -> "Fisheye";
             case "pumpkin_view" -> "Pumpkin View";
             case "dvd" -> "DVD Screensaver";
             case "fov_quake" -> "Quake FOV";
@@ -85,6 +92,12 @@ public class ClientQueueState {
             case "bury" -> "Buried Alive";
             case "curse_gear" -> "Cursed";
             case "stack_one" -> "Stack of One";
+            case "mob_army" -> "Mob Army";
+            case "anvil_rain" -> "Anvil Rain";
+            case "blind_noise" -> "Blind Panic";
+            case "rename_chat" -> "Rename the Streamer";
+            case "hot_potato" -> "Hot Potato";
+            case "lucky_block" -> "Lucky Block";
             default -> tauntId;
         };
     }

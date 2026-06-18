@@ -41,7 +41,8 @@ public class QueueManager {
 
     private static final Set<String> VISUAL_EFFECT_IDS = Set.of(
             "blur", "inverted_colors", "black_and_white", "lsd", "crt",
-            "pumpkin_view", "dvd"
+            "pumpkin_view", "dvd", "drunk", "vignette_heartbeat",
+            "pixelate", "mirror", "fisheye"
     );
 
     private static final Set<String> MINIGAME_IDS = Set.of(
@@ -326,7 +327,9 @@ public class QueueManager {
                 veRemaining,
                 activeVisualEffectDurationSeconds,
                 (int)(pausedVisualEffectRemainingTicks / 20),
-                pendingTaunts.size()
+                pendingTaunts.size(),
+                com.isaiahcreati.creatibotintegration.helpers.SafeMode.isActive()
+                        ? com.isaiahcreati.creatibotintegration.helpers.SafeMode.getRemainingSeconds() : 0
         );
 
         PacketHandler.sendToAll(packet);

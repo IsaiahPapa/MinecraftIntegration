@@ -26,7 +26,7 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {
-        if (ClientEffectState.cameraRollExpiryTick > 0) {
+        if (ClientEffectState.cameraRollExpiryTick > 0 || ClientEffectState.drunkActive) {
             event.setRoll(ClientEffectState.cameraRoll);
         }
     }

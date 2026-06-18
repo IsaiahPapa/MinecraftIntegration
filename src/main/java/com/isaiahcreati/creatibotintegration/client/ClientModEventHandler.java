@@ -19,6 +19,7 @@ public class ClientModEventHandler {
         registered = true;
         event.registerAbove(VanillaGuiLayers.SLEEP_OVERLAY, ClientEffectOverlayRenderer.PUMPKIN_OVERLAY_ID, ClientEffectOverlayRenderer::renderPumpkinOverlay);
         event.registerAbove(VanillaGuiLayers.SLEEP_OVERLAY, ClientEffectOverlayRenderer.DVD_OVERLAY_ID, ClientEffectOverlayRenderer::renderDvdOverlay);
+        event.registerAbove(VanillaGuiLayers.SLEEP_OVERLAY, ClientEffectOverlayRenderer.VIGNETTE_HEARTBEAT_OVERLAY_ID, ClientEffectOverlayRenderer::renderVignetteHeartbeat);
         event.registerAbove(VanillaGuiLayers.SLEEP_OVERLAY, ScoreboardOverlayRenderer.QUEUE_OVERLAY_ID, ScoreboardOverlayRenderer::render);
         event.registerAbove(VanillaGuiLayers.SLEEP_OVERLAY, ActivityFeedRenderer.ACTIVITY_FEED_ID, ActivityFeedRenderer::render);
     }

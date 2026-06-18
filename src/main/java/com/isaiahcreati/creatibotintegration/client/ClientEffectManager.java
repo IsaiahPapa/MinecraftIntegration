@@ -86,12 +86,27 @@ public class ClientEffectManager {
             case "lsd" -> {
                 ClientEffectState.activeShaderId = "lsd";
                 ClientEffectState.shaderExpiryTick = expiryTick;
-                ShaderManager.activateShader(ShaderManager.INVERT);
+                ShaderManager.activateShader(ShaderManager.LSD);
             }
             case "crt" -> {
                 ClientEffectState.activeShaderId = "crt";
                 ClientEffectState.shaderExpiryTick = expiryTick;
                 ShaderManager.activateShader(ShaderManager.CRT);
+            }
+            case "pixelate" -> {
+                ClientEffectState.activeShaderId = "pixelate";
+                ClientEffectState.shaderExpiryTick = expiryTick;
+                ShaderManager.activateShader(ShaderManager.PIXELATE);
+            }
+            case "mirror" -> {
+                ClientEffectState.activeShaderId = "mirror";
+                ClientEffectState.shaderExpiryTick = expiryTick;
+                ShaderManager.activateShader(ShaderManager.MIRROR);
+            }
+            case "fisheye" -> {
+                ClientEffectState.activeShaderId = "fisheye";
+                ClientEffectState.shaderExpiryTick = expiryTick;
+                ShaderManager.activateShader(ShaderManager.FISHEYE);
             }
             case "inverted_controls" -> {
                 ClientEffectState.invertedControls = true;
@@ -102,6 +117,20 @@ public class ClientEffectManager {
                 ClientEffectState.mouseDriftX = (random.nextBoolean() ? 1 : -1) * 1.5f;
                 ClientEffectState.mouseDriftY = (random.nextBoolean() ? 1 : -1) * 0.1f;
                 ClientEffectState.mouseDriftingExpiryTick = expiryTick;
+            }
+            case "drunk" -> {
+                ClientEffectState.drunkActive = true;
+                ClientEffectState.drunkExpiryTick = expiryTick;
+                ClientEffectState.drunkPhase = 0f;
+                ClientEffectState.mouseDrifting = true;
+                ClientEffectState.mouseDriftX = (random.nextBoolean() ? 1 : -1) * 0.3f;
+                ClientEffectState.mouseDriftY = (random.nextBoolean() ? 1 : -1) * 0.05f;
+                ClientEffectState.mouseDriftingExpiryTick = expiryTick;
+            }
+            case "vignette_heartbeat" -> {
+                ClientEffectState.vignetteHeartbeatActive = true;
+                ClientEffectState.vignetteHeartbeatExpiryTick = expiryTick;
+                ClientEffectState.vignetteHeartbeatPhase = 0f;
             }
             default -> CreatiIntegration.LOGGER.warn("Unknown client effect: {}", effectId);
         }
@@ -122,6 +151,10 @@ public class ClientEffectManager {
             ClientEffectState.activateEffect(effectId, effectExpiry);
             CreatiIntegration.LOGGER.info("Resumed visual effect '{}' with {} ticks remaining", effectId, remainingTicks);
         }
+    }
+
+    private static boolean isOtherEffectDrivingCamera() {
+        return ClientEffectState.cameraRollExpiryTick > 0;
     }
 
     public static void tick() {
@@ -170,8 +203,38 @@ public class ClientEffectManager {
             ClientEffectState.mouseDriftingExpiryTick = 0;
         }
 
+        if (ClientEffectState.drunkExpiryTick > 0 && currentTick >= ClientEffectState.drunkExpiryTick) {
+            ClientEffectState.drunkActive = false;
+            ClientEffectState.drunkExpiryTick = 0;
+            ClientEffectState.drunkPhase = 0f;
+            if (!isOtherEffectDrivingCamera()) {
+                ClientEffectState.cameraRoll = 0f;
+                ClientEffectState.cameraRollSpeed = 0f;
+                ClientEffectState.cameraRollExpiryTick = 0;
+            }
+            if (ClientEffectState.fovOverride != 0f && ClientEffectState.fovExpiryTick == 0) {
+                ClientEffectState.fovOverride = 0f;
+            }
+        }
+
+        if (ClientEffectState.vignetteHeartbeatExpiryTick > 0 && currentTick >= ClientEffectState.vignetteHeartbeatExpiryTick) {
+            ClientEffectState.vignetteHeartbeatActive = false;
+            ClientEffectState.vignetteHeartbeatExpiryTick = 0;
+            ClientEffectState.vignetteHeartbeatPhase = 0f;
+        }
+
         if (ClientEffectState.cameraRollSpeed != 0f) {
             ClientEffectState.cameraRoll = (ClientEffectState.cameraRoll + ClientEffectState.cameraRollSpeed) % 360f;
+        }
+
+        if (ClientEffectState.drunkActive) {
+            ClientEffectState.drunkPhase += 0.05f;
+            ClientEffectState.cameraRoll = (float) Math.sin(ClientEffectState.drunkPhase) * 15f;
+            ClientEffectState.fovOverride = 70f + (float) Math.sin(ClientEffectState.drunkPhase * 0.7f) * 25f;
+        }
+
+        if (ClientEffectState.vignetteHeartbeatActive) {
+            ClientEffectState.vignetteHeartbeatPhase += 0.15f;
         }
 
         if (ClientEffectState.dvdActive) {

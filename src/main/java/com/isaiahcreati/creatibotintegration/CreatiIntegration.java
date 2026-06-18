@@ -5,6 +5,7 @@ import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
 import com.isaiahcreati.creatibotintegration.helpers.Mobs;
 import com.isaiahcreati.creatibotintegration.helpers.OnboardingBook;
+import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
 import com.isaiahcreati.creatibotintegration.helpers.TauntDispatcher;
 import com.isaiahcreati.creatibotintegration.helpers.Utils;
 import com.isaiahcreati.creatibotintegration.integration.*;
@@ -36,7 +37,10 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -89,6 +93,7 @@ public class CreatiIntegration {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
+        SafeMode.setServer(event.getServer());
         try {
             String url;
             if (isDevelopmentEnvironment()) {
@@ -137,6 +142,16 @@ public class CreatiIntegration {
             socket.on("interaction:minecraft", args -> {
                 try {
                     LOGGER.info("Got interaction: " + args.toString());
+
+                    if (SafeMode.isActive()) {
+                        int remaining = SafeMode.getRemainingSeconds();
+                        LOGGER.info("Safe mode active ({}s remaining) — blocked interaction", remaining);
+                        for (ServerPlayer p : event.getServer().getPlayerList().getPlayers()) {
+                            Chat.SendMessage(p, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77is active (\u00a7d" + remaining + "s\u00a77) — redeem blocked");
+                        }
+                        return;
+                    }
+
                     if (!(args[0] instanceof String jsonString)) {
                         Chat.Broadcast("Incorrect message type for interaction:minecraft. Should be String, got '" +  args[0].getClass().getName() + "'");
                         return;
@@ -243,7 +258,52 @@ public class CreatiIntegration {
     public void onChat(ServerChatEvent event) {
         String message = event.getMessage().getString();
         message = message.replace('&', '\u00a7');
+        var sender = event.getPlayer();
+        if (sender instanceof ServerPlayer player) {
+            long currentTick = player.level().getServer().getTickCount();
+            Taunts.RenameState rename = Taunts.getActiveRename(player.getUUID(), currentTick);
+            if (rename != null) {
+                Component originalName = Component.literal(sender.getName().getString())
+                        .withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(net.minecraft.network.chat.TextColor.fromRgb(0xAAAAAA)).withItalic(true));
+                Component renamed = Component.literal(rename.name()).append(Component.literal(" (").append(originalName).append(Component.literal(")")));
+                Component body = Component.literal(message);
+                Component composed = Component.literal("<").append(renamed).append(Component.literal("> ")).append(body);
+                event.setMessage(composed);
+                return;
+            }
+        }
         event.setMessage(Component.literal(message));
+    }
+
+    @SubscribeEvent
+    public void onBlockBreak(BreakBlockEvent event) {
+        if (!(event.getPlayer() instanceof ServerPlayer player)) return;
+        if (Taunts.isLuckyBlock(event.getPos())) {
+            event.setCanceled(true);
+            if (event.getLevel() instanceof ServerLevel level) {
+                level.setBlock(event.getPos(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+            }
+            Taunts.onLuckyBlockBroken(player, event.getPos());
+        }
+    }
+
+    @SubscribeEvent
+    public void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        net.minecraft.world.level.block.state.BlockState placed = event.getPlacedBlock();
+        if (placed == null) return;
+        var heldItem = player.getMainHandItem();
+        if (heldItem.isEmpty()) heldItem = player.getOffhandItem();
+        if (!Taunts.isLuckyBlockItem(heldItem)) return;
+        if (!placed.is(net.minecraft.world.level.block.Blocks.SPONGE)) return;
+        Taunts.registerPlacedLuckyBlock(level, event.getPos());
+    }
+
+    @SubscribeEvent
+    public void onPlayerDeath(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        Taunts.clearHotPotatoOnDeath(player);
     }
 
 }

@@ -6,6 +6,7 @@ import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunt;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
+import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
 import com.isaiahcreati.creatibotintegration.network.PacketHandler;
 import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
 import com.mojang.brigadier.CommandDispatcher;
@@ -44,14 +45,18 @@ public class ModCommands {
             "drop_all", "half_heart", "hungry", "sky", "fake_tp", "jumpscare",
             "chicken_rain", "meteor_rain", "raid",
             "fire_trail", "downgrade_gear",
-            "anvil", "bury", "curse_gear", "stack_one"
+            "anvil", "bury", "curse_gear", "stack_one",
+            "mob_army", "anvil_rain", "blind_noise",
+            "rename_chat", "hot_potato", "lucky_block"
     };
 
     private static final String[] CLIENT_TAUNTS = {
             "fov_quake", "fov_zoom", "upside_down", "rolling_camera", "camera_tilt",
             "pumpkin_view", "dvd",
             "inverted_controls", "mouse_drifting",
-            "blur", "inverted_colors", "black_and_white", "lsd", "crt"
+            "blur", "inverted_colors", "black_and_white", "lsd", "crt",
+            "drunk", "vignette_heartbeat",
+            "pixelate", "mirror", "fisheye"
     };
 
     private static final String[] MINIGAME_TAUNTS = {
@@ -97,6 +102,47 @@ public class ModCommands {
                             }
                             socket.close();
                             player.sendSystemMessage(Component.literal("Disconnected from SocketIO").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
+                            return 1;
+                        })
+                )
+                // /creati safemode <on|off> [seconds]
+                .then(Commands.literal("safemode")
+                        .then(Commands.literal("on")
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    SafeMode.enable(context.getSource().getServer(), 30);
+                                    Chat.SendMessage(player, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77enabled for \u00a7d30s\u00a77. Redeems are paused.");
+                                    return 1;
+                                })
+                                .then(Commands.argument("seconds", IntegerArgumentType.integer(1, 600))
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            int seconds = IntegerArgumentType.getInteger(context, "seconds");
+                                            SafeMode.enable(context.getSource().getServer(), seconds);
+                                            Chat.SendMessage(player, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77enabled for \u00a7d" + seconds + "s\u00a77. Redeems are paused.");
+                                            return 1;
+                                        })
+                                )
+                        )
+                        .then(Commands.literal("off")
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    if (!SafeMode.isActive()) {
+                                        Chat.SendMessage(player, "\u00a77Safe Mode is not currently active.");
+                                        return 0;
+                                    }
+                                    SafeMode.disable();
+                                    Chat.SendMessage(player, "\u00a7a\u00a7l\u2714 Safe Mode \u00a7r\u00a77disabled. Redeems are live again.");
+                                    return 1;
+                                })
+                        )
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getPlayerOrException();
+                            if (SafeMode.isActive()) {
+                                Chat.SendMessage(player, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77is active: \u00a7d" + SafeMode.getRemainingSeconds() + "s\u00a77 remaining");
+                            } else {
+                                Chat.SendMessage(player, "\u00a77Safe Mode is \u00a7coff\u00a77. Usage: /creati safemode <on|off> [seconds]");
+                            }
                             return 1;
                         })
                 )

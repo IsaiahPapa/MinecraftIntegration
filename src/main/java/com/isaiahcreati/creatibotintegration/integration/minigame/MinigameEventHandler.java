@@ -44,6 +44,9 @@ public class MinigameEventHandler {
             game.onServerTick(event);
         }
         Taunts.tickFireTrails();
+        Taunts.tickRenames();
+        Taunts.tickHotPotatoes();
+        Taunts.tickLuckyBlocks();
         if (Config.QUEUE_ENABLED.get()) {
             QueueManager.tick(event);
         }
