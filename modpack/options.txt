@@ -1,0 +1,6 @@
+version:4790
+onboardAccessibility:false
+realmsNotifications:false
+darkMojangStudiosBackground:true
+tutorialStep:none
+startedCleanly:true

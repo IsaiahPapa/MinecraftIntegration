@@ -26,11 +26,13 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Integer> STAGGER_DELAY_TICKS;
     public static final ModConfigSpec.ConfigValue<Boolean> AUTO_CONNECT;
     public static final ModConfigSpec.ConfigValue<Boolean> ONBOARDED;
+    public static final ModConfigSpec.ConfigValue<Boolean> SKIP_ACCESSIBILITY_ONBOARDING;
+    public static final ModConfigSpec.ConfigValue<Boolean> REMOVE_REALMS_BUTTON;
     public static final ModConfigSpec.IntValue CONFIG_VERSION;
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final String CATEGORY_QUEUE = "Queue";
-    public static final int CURRENT_CONFIG_VERSION = 8;
+    public static final int CURRENT_CONFIG_VERSION = 9;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -144,6 +146,14 @@ public class Config {
                 .comment("Whether the onboarding setup has been completed")
                 .define("onboarded", false);
 
+        SKIP_ACCESSIBILITY_ONBOARDING = builder
+                .comment("Skip the Minecraft accessibility onboarding screen on first launch")
+                .define("ui.skip_accessibility_onboarding", true);
+
+        REMOVE_REALMS_BUTTON = builder
+                .comment("Remove the Realms button from the main menu")
+                .define("ui.remove_realms_button", true);
+
         CLIENT_CONFIG = builder.build();
     }
 
@@ -171,6 +181,8 @@ public class Config {
         STAGGER_DELAY_TICKS.set(20);
         AUTO_CONNECT.set(true);
         ONBOARDED.set(false);
+        SKIP_ACCESSIBILITY_ONBOARDING.set(true);
+        REMOVE_REALMS_BUTTON.set(true);
         CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
     }
 }

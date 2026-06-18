@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "extends": "default",
+  "loadingScreen": {
+    "startupLog": {
+      "visible": false
+    },
+    "performance": {
+      "visible": false
+    },
+    "decoration": {
+      "version": {
+        "type": "label",
+        "text": "${version}",
+        "visible": true,
+        "maintainAspectRatio": true,
+        "right": 10.0,
+        "bottom": 10.0,
+        "centerHorizontally": false,
+        "centerVertically": false,
+        "font": "default"
+      },
+      "fox": {
+        "type": "image",
+        "texture": {
+          "resource": "fox_running.png",
+          "scaling": {
+            "type": "stretch",
+            "width": 151,
+            "height": 128,
+            "linearScaling": false
+          },
+          "animation": {
+            "frameCount": 28
+          }
+        },
+        "visible": false,
+        "maintainAspectRatio": true,
+        "right": 10.0,
+        "bottom": "1.0rem",
+        "centerHorizontally": false,
+        "centerVertically": false,
+        "font": "default"
+      }
+    }
+  }
+}
