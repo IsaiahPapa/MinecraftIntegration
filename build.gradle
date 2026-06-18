@@ -2,7 +2,6 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'net.neoforged.moddev' version '2.0.141'
-    id "com.matthewprenger.cursegradle" version "1.4.0"
 }
 
 version = mod_version
@@ -159,23 +158,6 @@ tasks.register('deleteCustomDirs', Delete) {
     delete "${project.projectDir}/output", "${project.projectDir}/releases"
 }
 clean.dependsOn "deleteCustomDirs"
-
-curseforge {
-    apiKey = project.findProperty('curseApiKey') ?: 'unset'
-    project {
-        id = mod_curseforge_id
-        releaseType = project.findProperty('releaseType') ?: 'beta'
-        addGameVersion minecraft_version
-
-        mainArtifact(jar) {
-            displayName = "[NeoForge] ${mod_name} ${minecraft_version} ${version}"
-        }
-
-        relations {
-            requiredDependency 'yet-another-config-lib-v3'
-        }
-    }
-}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
