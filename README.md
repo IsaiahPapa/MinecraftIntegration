@@ -12,10 +12,10 @@ A Minecraft Forge mod that integrates with Creati's Bot for Twitch stream intera
 
 ## Getting Started
 
-1. Install [Minecraft Forge](https://files.minecraftforge.net/) for MC 1.20
+1. Install [NeoForge](https://projects.neoforged.net/) for MC 26.1
 2. Download the mod and [Yet Another Config Lib](https://modrinth.com/mod/yacl) (required dependency)
 3. Place both jars in your `mods` folder
-4. Launch Minecraft with the Forge profile
+4. Launch Minecraft with the NeoForge profile
 
 ## Commands
 
@@ -34,7 +34,7 @@ A Minecraft Forge mod that integrates with Creati's Bot for Twitch stream intera
 
 ### Prerequisites
 
-- JDK 17 (Temurin recommended)
+- JDK 25 (Temurin recommended)
 - Gradle 8.x
 
 ### Build & Run
@@ -135,23 +135,21 @@ packwiz remove <mod-name>
 |-----|---------|
 | Creati's Bot Integration | Twitch bot integration |
 | YACL v3 | Required dependency |
-| Embeddium | Performance (rendering) |
-| Oculus | Shader support |
-| JEI | Recipe viewer |
+| Sodium | Performance (rendering) |
+| Iris Shaders | Shader support |
+| ModernFix | Memory/performance optimization |
 | AppleSkin | Food/hunger overlay |
-| Mouse Tweaks | Inventory sorting |
-| FerriteCore | Memory optimization |
-| Fast Leaf Decay | QOL |
 | Jade | HUD info overlay |
+| JEI | Recipe viewer |
+| Waystones | Fast travel (+ Balm dep) |
+| Sophisticated Backpacks | Inventory expansion (+ Sophisticated Core dep) |
+| Biomes O' Plenty | World generation (+ GlitchCore, TerraBlender deps) |
+| Pipez | Item/fluid/energy transport |
+| Artifacts | Equipable trinkets |
+| TrashSlot | Inventory trash slot |
+| Just Zoom | Zoom keybind (+ Konkrete dep) |
+| Shogi | Library used by Waystones |
 | Complementary Reimagined | Shader pack (override) |
-
-### NeoForge Migration (Future)
-
-When moving to NeoForge/1.21.1:
-1. Create a new branch
-2. Change `forge` to `neoforge` in `modpack/pack.toml` and update the version
-3. Re-add mods with their NeoForge variants
-4. Update the Minecraft version and acceptable-game-versions
 
 ## License
 

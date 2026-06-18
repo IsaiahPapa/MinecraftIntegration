@@ -125,14 +125,18 @@ tasks.withType(ProcessResources).configureEach {
 }
 
 shadowJar {
-    archiveClassifier = ''
+    archiveClassifier = 'shadow'
     configurations = [project.configurations.jarJar]
     relocate 'io.socket', "${project.group}.shadow.io.socket"
 }
-assemble.dependsOn shadowJar
+// shadowJar is not used for publishing: the NeoForge jarJar mechanism already
+// bundles socket.io-client into the slim jar (META-INF/jarjar/). The shadow
+// plugin's bundled ASM cannot read Java 25 class files (major version 69),
+// so relocating project classes fails. Keep the task registered but don't
+// wire it into assemble or publishing.
 
 jar {
-    archiveClassifier = 'slim'
+    archiveClassifier = ''
     manifest {
         attributes([
                 "Specification-Title"     : mod_id,
@@ -150,7 +154,6 @@ publishing {
     publications {
         register('mavenJava', MavenPublication) {
             from components.java
-            artifact shadowJar
 
             groupId mod_group_id
             artifactId = "${mod_id}-NeoForge"
@@ -176,7 +179,7 @@ curseforge {
         releaseType = project.findProperty('releaseType') ?: 'beta'
         addGameVersion minecraft_version
 
-        mainArtifact(shadowJar) {
+        mainArtifact(jar) {
             displayName = "[NeoForge] ${mod_name} ${minecraft_version} ${version}"
         }
 
