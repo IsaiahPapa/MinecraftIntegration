@@ -78,10 +78,20 @@ public class ParkourMinigame extends Minigame {
     public boolean checkLose(ServerPlayer player) { return false; }
 
     @Override
-    public void onTick(ServerPlayer player, long currentTick, long elapsedTicks) {}
+    public void onTick(ServerPlayer player, long currentTick, long elapsedTicks) {
+        // Falling into the water hazard resets the player to the start (same as
+        // a void fall, but caught earlier so the player doesn't sink).
+        if (player.level().getBlockState(player.blockPosition()).is(Blocks.WATER)) {
+            resetToStart(player);
+        }
+    }
 
     @Override
     public void onPlayerFall(ServerPlayer player) {
+        resetToStart(player);
+    }
+
+    private void resetToStart(ServerPlayer player) {
         BlockPos startPos = course.getStartPosition();
         player.teleportTo(startPos.getX() + 0.5, (double) startPos.getY(), startPos.getZ() + 0.5);
         player.setDeltaMovement(0, 0, 0);

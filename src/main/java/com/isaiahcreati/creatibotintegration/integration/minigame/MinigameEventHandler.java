@@ -5,6 +5,7 @@ import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.level.GameType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -95,10 +96,23 @@ public class MinigameEventHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         UUID uuid = player.getUUID();
+        boolean wasInMinigame = false;
         for (Minigame game : minigames) {
             if (game.isInMinigame(player)) {
                 game.handlePlayerReconnect(player);
+                wasInMinigame = true;
             }
+        }
+
+        // Safety net: if the player is in the minigame dimension but not tracked
+        // by any minigame (e.g. after a mod version change wiped the session
+        // state), teleport them to the overworld and restore survival mode.
+        if (!wasInMinigame && MinigameDimension.isMinigameDimension(player.level())) {
+            net.minecraft.server.level.ServerLevel overworld = player.level().getServer().overworld();
+            player.teleportTo(overworld, 0.5, 100, 0.5, java.util.Set.of(), 0f, 0f, false);
+            player.setGameMode(GameType.SURVIVAL);
+            player.removeEffect(net.minecraft.world.effect.MobEffects.RESISTANCE);
+            player.removeEffect(net.minecraft.world.effect.MobEffects.SLOW_FALLING);
         }
     }
 

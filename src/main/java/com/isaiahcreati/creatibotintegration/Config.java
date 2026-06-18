@@ -15,8 +15,11 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_FAIL_DAMAGE;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_DECAY_DELAY_TICKS;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_GRACE_PERIOD_SECONDS;
+    public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_FLOOR_SIZE;
+    public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_FLOOR_COUNT;
     public static final ModConfigSpec.ConfigValue<Boolean> DROPPER_ENABLED;
     public static final ModConfigSpec.ConfigValue<Integer> DROPPER_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Integer> DROPPER_WATER_SIZE;
     public static final ModConfigSpec.ConfigValue<Boolean> QUEUE_ENABLED;
     public static final ModConfigSpec.ConfigValue<Boolean> SIDEBAR_VISIBLE;
     public static final ModConfigSpec.ConfigValue<Boolean> ACTIVITY_FEED_VISIBLE;
@@ -27,7 +30,7 @@ public class Config {
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final String CATEGORY_QUEUE = "Queue";
-    public static final int CURRENT_CONFIG_VERSION = 7;
+    public static final int CURRENT_CONFIG_VERSION = 8;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -57,7 +60,7 @@ public class Config {
 
         PARKOUR_DURATION_SECONDS = builder
                 .comment("Time limit in seconds to complete the parkour course")
-                .defineInRange("parkour.duration_seconds", 15, 5, 120);
+                .defineInRange("parkour.duration_seconds", 25, 5, 120);
 
         PARKOUR_FAIL_DAMAGE = builder
                 .comment("Damage dealt on failing to complete the parkour course (2 damage = 1 heart)")
@@ -87,6 +90,14 @@ public class Config {
                 .comment("Grace period in seconds before blocks start decaying (countdown: 3, 2, 1, GO!)")
                 .defineInRange("tntrun.grace_period_seconds", 3, 0, 10);
 
+        TNT_RUN_FLOOR_SIZE = builder
+                .comment("Size of each TNT Run floor (e.g. 16 = 16x16). Smaller = harder.")
+                .defineInRange("tntrun.floor_size", 16, 8, 32);
+
+        TNT_RUN_FLOOR_COUNT = builder
+                .comment("Number of stacked floors (1-3). Fewer = harder.")
+                .defineInRange("tntrun.floor_count", 2, 1, 3);
+
         builder.pop();
 
         builder.comment("Dropper Settings").push("Dropper");
@@ -98,6 +109,10 @@ public class Config {
         DROPPER_FAIL_DAMAGE = builder
                 .comment("Damage dealt on missing the water landing (2 damage = 1 heart)")
                 .defineInRange("dropper.fail_damage", 8, 0, 40);
+
+        DROPPER_WATER_SIZE = builder
+                .comment("Size of the water landing pad (1 = 1x1, 2 = 2x2, 3 = 3x3). Smaller = harder.")
+                .defineInRange("dropper.water_size", 2, 1, 3);
 
         builder.pop();
 
@@ -142,11 +157,14 @@ public class Config {
         TNT_RUN_DURATION_SECONDS.set(30);
         TNT_RUN_FAIL_DAMAGE.set(8);
         TNT_RUN_ENABLED.set(true);
+        TNT_RUN_FLOOR_SIZE.set(16);
+        TNT_RUN_FLOOR_COUNT.set(2);
         PARKOUR_ENABLED.set(true);
-        PARKOUR_DURATION_SECONDS.set(15);
+        PARKOUR_DURATION_SECONDS.set(25);
         PARKOUR_FAIL_DAMAGE.set(8);
         DROPPER_ENABLED.set(true);
         DROPPER_FAIL_DAMAGE.set(8);
+        DROPPER_WATER_SIZE.set(2);
         QUEUE_ENABLED.set(true);
         SIDEBAR_VISIBLE.set(true);
         ACTIVITY_FEED_VISIBLE.set(true);

@@ -64,15 +64,9 @@ public class DropperMinigame extends Minigame {
 
     @Override
     public boolean checkWin(ServerPlayer player) {
-        BlockPos waterCenter = arena.getWaterCenter();
-        int dx = Math.abs(player.blockPosition().getX() - waterCenter.getX());
-        int dz = Math.abs(player.blockPosition().getZ() - waterCenter.getZ());
-
-        if (dx <= 1 && dz <= 1) {
-            return player.level().getBlockState(player.blockPosition()).is(Blocks.WATER);
-        }
-
-        return false;
+        // The only water in the arena is the landing pad, so standing in water
+        // at the bottom of the shaft means a successful landing.
+        return player.level().getBlockState(player.blockPosition()).is(Blocks.WATER);
     }
 
     @Override

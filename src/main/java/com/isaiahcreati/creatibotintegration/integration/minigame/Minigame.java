@@ -92,7 +92,6 @@ public abstract class Minigame {
         }
 
         player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 40, 4));
-        player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0));
 
         player.setGameMode(GameType.ADVENTURE);
 
@@ -267,6 +266,9 @@ public abstract class Minigame {
         player.setGameMode(state.getOriginalGameMode());
         player.removeEffect(MobEffects.RESISTANCE);
         player.removeEffect(MobEffects.SLOW_FALLING);
+
+        // Clean up the queue so future taunts aren't blocked.
+        QueueManager.onMinigameEnd(player);
 
         Chat.SendAlert(player, "&7You were returned from " + getTitle().getString() + " after reconnecting.");
     }
