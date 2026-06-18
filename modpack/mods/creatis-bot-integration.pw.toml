@@ -1,0 +1,13 @@
+name = "Creati's Bot Integration"
+filename = "creatibotintegration-2.0.2.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "9ff1be637c14704eceb270a269a921941d97f26c"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8273914
+project-id = 970500

@@ -21,6 +21,11 @@ hash = "a333d665049de822e70bc935479a43f13a6a825621ad20338c220303a3f00883"
 metafile = true
 
 [[files]]
+file = "mods/creatis-bot-integration.pw.toml"
+hash = "5fac25af5604b62d626b34bdbda74fe98f9db7ebccface728d47f9f29371ff48"
+metafile = true
+
+[[files]]
 file = "mods/glitchcore.pw.toml"
 hash = "dccbcf841ba3855f0d7c2394f01fd2b72f1d53bfbb611e6db0cc160d809e4df7"
 metafile = true

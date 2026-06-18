@@ -1,0 +1,127 @@
+name: Modpack sync check
+
+# Runs after every mod release tag. Compares the mod version against the
+# version referenced by the modpack's packwiz metadata and opens a GitHub
+# issue when the modpack has fallen behind by a MINOR or MAJOR bump.
+# Patch bumps are silently ignored (per the batch-update policy).
+
+on:
+  workflow_run:
+    workflows: ["Publish pipeline"]
+    types: [completed]
+    branches: ["v*"]
+
+  # Manual trigger for debugging / catching up after a manual sync
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Compare mod vs modpack versions
+        id: compare
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import os, re, sys
+
+          # Mod version from gradle.properties
+          with open("gradle.properties") as f:
+              gp = f.read()
+          m = re.search(r"^mod_version=(.+)$", gp, re.M)
+          if not m:
+              print("::error::could not find mod_version in gradle.properties")
+              sys.exit(1)
+          mod_version = m.group(1).strip()
+
+          # Modpack-referenced mod version from mods/creatis-bot-integration.pw.toml
+          pw_path = "modpack/mods/creatis-bot-integration.pw.toml"
+          try:
+              with open(pw_path) as f:
+                  pw = f.read()
+          except FileNotFoundError:
+              print("::error::modpack mod pw.toml not found at", pw_path)
+              sys.exit(1)
+
+          fn = re.search(r'^filename\s*=\s*"creatibotintegration-(.+)\.jar"', pw, re.M)
+          if not fn:
+              print("::error::could not parse filename from", pw_path)
+              sys.exit(1)
+          pack_version = fn.group(1).strip()
+
+          def parse(v):
+              parts = v.split(".")
+              return [int(p) if p.isdigit() else p for p in parts]
+
+          mod_parts = parse(mod_version)
+          pack_parts = parse(pack_version)
+
+          # Pad to equal length
+          while len(pack_parts) < len(mod_parts):
+              pack_parts.append(0)
+          while len(mod_parts) < len(pack_parts):
+              mod_parts.append(0)
+
+          # Find highest index that differs
+          diff_idx = None
+          for i, (a, b) in enumerate(zip(mod_parts, pack_parts)):
+              if a != b:
+                  diff_idx = i
+                  break
+
+          if diff_idx is None:
+              # identical
+              print(f"::set-output name=status::sync")
+              print(f"::set-output name=mod_version::{mod_version}")
+              print(f"::set-output name=pack_version::{pack_version}")
+              print(f"::set-output name=bump_kind::none")
+              print(f"SYNC: mod={mod_version} pack={pack_version}")
+              sys.exit(0)
+
+          # 0 = major, 1 = minor, 2 = patch
+          if diff_idx == 0:
+              kind = "major"
+          elif diff_idx == 1:
+              kind = "minor"
+          else:
+              kind = "patch"
+
+          print(f"::set-output name=status::behind")
+          print(f"::set-output name=mod_version::{mod_version}")
+          print(f"::set-output name=pack_version::{pack_version}")
+          print(f"::set-output name=bump_kind::{kind}")
+          print(f"BEHIND: mod={mod_version} pack={pack_version} (diff at idx {diff_idx} = {kind})")
+          PY
+
+      - name: Open rebundle issue (minor/major only)
+        if: steps.compare.outputs.bump_kind == 'minor' || steps.compare.outputs.bump_kind == 'major'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "Modpack rebundle required: mod v${{ steps.compare.outputs.mod_version }} released, modpack still on v${{ steps.compare.outputs.pack_version }}"
+          content-filepath: .github/modpack-rebundle-template.md
+          labels: modpack-rebundle
+          assignees: IsaiahPapa
+
+      - name: Report
+        run: |
+          echo "Mod:        ${{ steps.compare.outputs.mod_version }}"
+          echo "Modpack:    references v${{ steps.compare.outputs.pack_version }}"
+          echo "Bump kind:  ${{ steps.compare.outputs.bump_kind }}"
+          if [[ "${{ steps.compare.outputs.bump_kind }}" == "minor" || "${{ steps.compare.outputs.bump_kind }}" == "major" ]]; then
+            echo "::notice::Opened a rebundle issue"
+          elif [[ "${{ steps.compare.outputs.bump_kind }}" == "patch" ]]; then
+            echo "::notice::Patch bump only — modpack does not need rebundling"
+          else
+            echo "::notice::In sync"
+          fi
