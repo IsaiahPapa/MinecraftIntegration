@@ -106,6 +106,10 @@ hash = "5f5fda95689593b78312eeea141d6d3063515c63e3827c53e6baee374ce3b313"
 metafile = true
 
 [[files]]
+file = "overrides/config/modernfix-mixins.properties"
+hash = "2241a9781a6eddb7b18aabf095dca90edbb6dfeb63764db7104125460b23cee2"
+
+[[files]]
 file = "overrides/shaderpacks/ComplementaryReimagined_r5.8.1.zip"
 hash = "3f1cd389e717b2e62f58edff222059b9c60de71b14bb49b517eb58318ce35b15"
 
