@@ -4,25 +4,18 @@ import com.isaiahcreati.creatibotintegration.Config;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 public final class Chat {
 
     static public void Broadcast(String message){
-        // Get the MinecraftServer instance
         MinecraftServer minecraftServer = ServerLifecycleHooks.getCurrentServer();
-        // Send chat message
         minecraftServer.getPlayerList().broadcastSystemMessage(Component.literal(message), false);
     }
 
     static public void SendMessage(ServerPlayer player, String message){
-        // Get the MinecraftServer instance
         MinecraftServer minecraftServer = ServerLifecycleHooks.getCurrentServer();
-
-        //Replace character to support colors
-        message = message.replace('&', '§');
-
-        // Send chat message
+        message = message.replace('&', '\u00a7');
         minecraftServer.getPlayerList().broadcastSystemMessage(Component.literal(message), false);
     }
 

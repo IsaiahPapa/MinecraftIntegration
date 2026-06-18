@@ -1,0 +1,113 @@
+hash-format = "sha256"
+
+[[files]]
+file = "mods/appleskin.pw.toml"
+hash = "de7c7b5b18ca4d989b40dc3a2d2f6508af2af418558ae4f08af2c2b4635648b1"
+metafile = true
+
+[[files]]
+file = "mods/artifacts.pw.toml"
+hash = "2c4cf7ad543b24510ff0d4a844eb83ad9390ef22aac7fcef75fa4374d306b2bc"
+metafile = true
+
+[[files]]
+file = "mods/balm.pw.toml"
+hash = "4135f8fbce7e1d7980b846e99cc5bae29b35237934bcc849c14bb647a8a7d4c4"
+metafile = true
+
+[[files]]
+file = "mods/biomes-o-plenty.pw.toml"
+hash = "a333d665049de822e70bc935479a43f13a6a825621ad20338c220303a3f00883"
+metafile = true
+
+[[files]]
+file = "mods/glitchcore.pw.toml"
+hash = "dccbcf841ba3855f0d7c2394f01fd2b72f1d53bfbb611e6db0cc160d809e4df7"
+metafile = true
+
+[[files]]
+file = "mods/irisshaders.pw.toml"
+hash = "0012f1147e0e3abe56854c0b4cb985a4e7fbe3ce1df0f4038286f6c13b91171c"
+metafile = true
+
+[[files]]
+file = "mods/jade.pw.toml"
+hash = "bcd3716dbb975098cad2bf94b1043ffc0589470db0e24d8db6a8e38a0de59ed8"
+metafile = true
+
+[[files]]
+file = "mods/jei.pw.toml"
+hash = "fc06f81ec8b460e329ecb2466ece7e884ec62f55d1b4eb3506965aa9594ca26c"
+metafile = true
+
+[[files]]
+file = "mods/just-zoom.pw.toml"
+hash = "74662e341955aa5c010f48232eef0109589cdab988eb7189c09e43fe62a5e79d"
+metafile = true
+
+[[files]]
+file = "mods/konkrete.pw.toml"
+hash = "4d33f71c01818e49a3d01210b030c9cc187709f07fd4eb77e78999f8116c43b3"
+metafile = true
+
+[[files]]
+file = "mods/modernfix.pw.toml"
+hash = "88d51ea63d58389d9413240c3bcbe1410e0bc69eac66ef5761750421478d4be2"
+metafile = true
+
+[[files]]
+file = "mods/pipez.pw.toml"
+hash = "54485fe66c1e6300851816c6ad5f18f4d04006f9af374c0e89d5545ba5939a4d"
+metafile = true
+
+[[files]]
+file = "mods/shogi.pw.toml"
+hash = "5e92cccb4bb9b4047bb5fd168f726b9b56f586d95185a15e563e3c7a43c54de6"
+metafile = true
+
+[[files]]
+file = "mods/sodium.pw.toml"
+hash = "e9c8f2a01fc4f985ce079ee43e39d5ae0126feff4c6f5200d45b64a42a758e94"
+metafile = true
+
+[[files]]
+file = "mods/sophisticated-backpacks.pw.toml"
+hash = "aa99adfec55e6867f71e1c4a45c1c192a8c0044fce449659ed1741f9b6f2a027"
+metafile = true
+
+[[files]]
+file = "mods/sophisticated-core.pw.toml"
+hash = "5d9a6cf7851d3237197629a3812475b9ae9a5705884bea97927daa8e83e87f71"
+metafile = true
+
+[[files]]
+file = "mods/terrablender-neoforge.pw.toml"
+hash = "19e288bf4ba6a9d45ba18148244998e3f8503910d3d23928d432ecdbf2c50978"
+metafile = true
+
+[[files]]
+file = "mods/trashslot.pw.toml"
+hash = "cb8d1e54e543b8ddb81321ea822380c19290e06d9e42a36f4bdf5e3dcb7d19aa"
+metafile = true
+
+[[files]]
+file = "mods/waystones.pw.toml"
+hash = "98ddda8e66f6ae968b947a610f268e48f483d6426f11e659061b5ade19994829"
+metafile = true
+
+[[files]]
+file = "mods/yacl.pw.toml"
+hash = "5f5fda95689593b78312eeea141d6d3063515c63e3827c53e6baee374ce3b313"
+metafile = true
+
+[[files]]
+file = "overrides/shaderpacks/ComplementaryReimagined_r5.8.1.zip"
+hash = "3f1cd389e717b2e62f58edff222059b9c60de71b14bb49b517eb58318ce35b15"
+
+[[files]]
+file = "scripts/export-cf.sh"
+hash = "5ca6683dfc3297ba584822b026f6df2af127626764a5696ba42dfb35ce8085db"
+
+[[files]]
+file = "scripts/export-modrinth.sh"
+hash = "8ff52d20d09bf0a8d3e1018711839ef3e30c28e51dd3fa02ab5c0a62e6c57931"

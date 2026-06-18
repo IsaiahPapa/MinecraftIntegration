@@ -1,0 +1,13 @@
+name = "Just Zoom"
+filename = "justzoom_neoforge_2.1.3_MC_1.21.11.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "7f834ac4d3ab4847e61695da6e82c303a3d769e7"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7368961
+project-id = 561885

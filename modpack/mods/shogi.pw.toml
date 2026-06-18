@@ -1,0 +1,13 @@
+name = "Shogi"
+filename = "shogi-neoforge-26.1-26.1.0.3.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "56a72bd6ae7a82afc3430291e23865b023f83dba"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7842234
+project-id = 1475746

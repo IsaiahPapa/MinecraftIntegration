@@ -1,52 +1,156 @@
 # Creati's Bot Minecraft Integration
 
-This repository contains the source code for a Minecraft Forge mod that enhances gameplay with various features, including custom command integration, entity spawning, and more. The mod is designed to work with Minecraft Forge, offering a range of functionalities to enrich the Minecraft experience.
+A Minecraft Forge mod that integrates with Creati's Bot for Twitch stream interactions — taunts, minigames, effects, and more.
 
 ## Features
 
-- **Custom Command Integration**: Allows for the execution of specific actions in-game through custom commands.
-- **Entity Management**: Facilitates spawning and managing entities in the game world, including tamable creatures.
-- **Additional Gameplay Enhancements**: Various other features to enhance the player's interaction with the game world.
+- **Twitch Taunts**: Viewers trigger in-game actions like spawning TNT, shuffling inventory, launching players into the sky, and 30+ more
+- **Client-Side Effects**: FOV changes, camera roll, pumpkin overlay, DVD screensaver, shaders (blur, invert, B&W, LSD, CRT), inverted controls, mouse drifting
+- **Minigames**: Parkour course and TNT Run with config options
+- **Mob Spawning & Effects**: `/creati test spawn <mob>` and `/creati test splash <effect>` for quick testing
+- **Config UI**: YACL-powered settings screen accessible via Mods → Config
 
 ## Getting Started
 
-To use this mod, you need to have Minecraft Forge installed. Follow these steps to get started:
+1. Install [NeoForge](https://projects.neoforged.net/) for MC 26.1
+2. Download the mod and [Yet Another Config Lib](https://modrinth.com/mod/yacl) (required dependency)
+3. Place both jars in your `mods` folder
+4. Launch Minecraft with the NeoForge profile
 
-1. **Install Minecraft Forge**: Make sure you have Minecraft Forge installed for the correct version of Minecraft. You can download it from [Minecraft Forge](https://files.minecraftforge.net/).
+## Commands
 
-2. **Download the Mod**: Download the latest version of the mod from this repository's releases.
+| Command | Description |
+|---------|-------------|
+| `/creati connect` | Connect to the bot server |
+| `/creati disconnect` | Disconnect from the bot server |
+| `/creati test` | Open clickable taunt test menu |
+| `/creati test <tauntId>` | Trigger a specific taunt (5s duration) |
+| `/creati test spawn <mobId> [amount]` | Spawn mobs near you |
+| `/creati test splash <effectId> [duration] [amplifier]` | Apply a potion effect |
+| `/creati parkour start/leave` | Start/leave parkour minigame |
+| `/creati tntrun start/leave` | Start/leave TNT Run minigame |
 
-3. **Install the Mod**: Place the downloaded mod file into the `mods` folder of your Minecraft installation.
+## Development
 
-4. **Run Minecraft**: Start Minecraft with the Forge profile, and the mod should be loaded.
+### Prerequisites
 
-## Usage
+- JDK 25 (Temurin recommended)
+- Gradle 8.x
 
-The mod introduces several commands and features. For detailed usage and command information, please refer to our integration guide at [Minecraft Integration Guide](https://bot.isaiahcreati.com/integration/minecraft).
+### Build & Run
 
-## Contributing
+```bash
+# Build the mod
+JAVA_HOME=/path/to/jdk-17 ./gradlew build
 
-Contributions to this project are welcome! If you have suggestions for improvements or encounter any issues, please feel free to open an issue or submit a pull request.
+# Run client for testing
+JAVA_HOME=/path/to/jdk-17 ./gradlew runClient
+
+# Compile only (faster)
+JAVA_HOME=/path/to/jdk-17 ./gradlew compileJava
+```
+
+### Release Workflow
+
+Pushing to any branch (including `main`) does **not** trigger a release. Only tags trigger the publish pipeline.
+
+1. Update `mod_version` in `gradle.properties` (e.g., `1.0.0.3`)
+2. Commit and push to `main`
+3. Create and push a tag:
+
+```bash
+# Full release
+git tag v1.0.0.3
+git push origin v1.0.0.3
+
+# Beta release (suffix with -beta or -alpha)
+git tag v1.0.0.3-beta
+git push origin v1.0.0.3-beta
+```
+
+4. GitHub Actions will:
+   - Build the mod
+   - Create a GitHub Release (draft for full, pre-release for beta)
+   - Publish to CurseForge
+
+**Tag format:**
+- `v1.0.0.3` → CurseForge **release** type
+- `v1.0.0.3-beta` or `v1.0.0.3-alpha` → CurseForge **beta** type
+
+## Configuration
+
+In-game: **Mods → Creati's Bot Integration → Config**
+
+| Setting | Description |
+|---------|-------------|
+| Alert Key | Your bot key from the Creati's Bot dashboard |
+| Chat Alerts | Show chat messages when taunts are triggered |
+
+Advanced settings (parkour duration, TNT Run decay, etc.) are in the config file:
+`creatibotintegration-common.toml`
+
+## Modpack
+
+A vanilla+ modpack is included in `modpack/` for easy distribution via CurseForge and Modrinth. It's managed with [Packwiz](https://packwiz.infra.link/).
+
+### Setup
+
+```bash
+# Install Packwiz (requires Go)
+go install github.com/packwiz/packwiz@latest
+
+# Navigate to the modpack directory
+cd modpack
+```
+
+### Adding Mods
+
+```bash
+# Search and add from CurseForge
+packwiz curseforge add <slug-or-search-term>
+
+# Add by CurseForge project ID
+packwiz curseforge add --addon-id <project-id>
+
+# Add from Modrinth
+packwiz modrinth add <slug-or-search-term>
+
+# Remove a mod
+packwiz remove <mod-name>
+```
+
+### Exporting
+
+```bash
+# CurseForge zip (upload to curseforge.com)
+./scripts/export-cf.sh
+
+# Modrinth .mrpack (upload to modrinth.com)
+./scripts/export-modrinth.sh
+```
+
+### Current Mods
+
+| Mod | Purpose |
+|-----|---------|
+| Creati's Bot Integration | Twitch bot integration |
+| YACL v3 | Required dependency |
+| Sodium | Performance (rendering) |
+| Iris Shaders | Shader support |
+| ModernFix | Memory/performance optimization |
+| AppleSkin | Food/hunger overlay |
+| Jade | HUD info overlay |
+| JEI | Recipe viewer |
+| Waystones | Fast travel (+ Balm dep) |
+| Sophisticated Backpacks | Inventory expansion (+ Sophisticated Core dep) |
+| Biomes O' Plenty | World generation (+ GlitchCore, TerraBlender deps) |
+| Pipez | Item/fluid/energy transport |
+| Artifacts | Equipable trinkets |
+| TrashSlot | Inventory trash slot |
+| Just Zoom | Zoom keybind (+ Konkrete dep) |
+| Shogi | Library used by Waystones |
+| Complementary Reimagined | Shader pack (override) |
 
 ## License
 
-This project is licensed under [specify your license] - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Thanks to the Minecraft Forge team for their incredible work on the Forge API.
-- Special thanks to [any other parties you wish to acknowledge].
-
-## Final Notes and Background
-
-This project is an homage to my Minecraft streams and represents a full-circle journey in my channel's development. I was the first person on Twitch to integrate Channel Points, an achievement that, while modest, provided me with valuable insights into what makes viewer experiences entertaining and engaging.
-
-Rather than rewriting all of the code for a new integration, I've chosen to build upon my existing website infrastructure. This approach streamlines the integration process and simplifies the management of in-game interactions, setting my integration apart from more generic systems.
-
-The essence of this mod is to enhance viewer interaction and provide an easy-to-use, entertaining platform for both streamers and viewers. It's all about bringing a new level of engagement to Minecraft streams, combining creativity with practicality.
-
-I am aware that similar integrations have been done before, and there are other options available, but I wanted to tackle this project from my unique perspective, drawing upon my own experiences and insights.
-
-Please have fun with my code, that why I wrote it :)
-
--- Isaiah
+All Rights Reserved. See the LICENSE file for details.
