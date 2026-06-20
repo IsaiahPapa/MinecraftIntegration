@@ -13,6 +13,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
@@ -26,9 +28,10 @@ public final class Mobs {
         spawnMobNearPlayer(player, mobId, 1, "");
     }
 
-    static public void spawnMobNearPlayer(ServerPlayer player, String mobId, int amount, String mobName){
+    static public List<Entity> spawnMobNearPlayer(ServerPlayer player, String mobId, int amount, String mobName){
+        List<Entity> spawned = new ArrayList<>();
         EntityType<?> mob =  getMobByName(mobId);
-        if(mob == null) return;
+        if(mob == null) return spawned;
 
         for (int i = 0; i < amount; i++) {
             Entity mobEntity  = mob.create(player.level(), EntitySpawnReason.EVENT);
@@ -38,12 +41,14 @@ public final class Mobs {
             Vec3 safePosition = getSafeMobPosition(player);
             if(safePosition == null) {
                 LOGGER.info("Cannot spawn mob. No safe position");
-                return;
+                return spawned;
             };
             mobEntity.setCustomName(Component.literal(mobName));
             mobEntity.setPos(safePosition.x, safePosition.y, safePosition.z);
             player.level().addFreshEntity(mobEntity);
+            spawned.add(mobEntity);
         }
+        return spawned;
     }
 
 

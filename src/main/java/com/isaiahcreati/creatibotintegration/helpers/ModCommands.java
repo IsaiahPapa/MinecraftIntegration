@@ -4,6 +4,7 @@ import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
+import com.isaiahcreati.creatibotintegration.integration.MobModifier;
 import com.isaiahcreati.creatibotintegration.integration.Taunt;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
@@ -266,13 +267,35 @@ public class ModCommands {
                                             if (parts.length > 1) {
                                                 try { amount = Integer.parseInt(parts[1]); } catch (NumberFormatException e) { amount = 1; }
                                             }
-                                            Mobs.spawnMobNearPlayer(player, actualMobId, amount, "");
+                                            java.util.List<MobModifier> modifiers = null;
+                                            for (String part : parts) {
+                                                if (part.startsWith("{")) {
+                                                    try {
+                                                        com.google.gson.Gson gson = new com.google.gson.Gson();
+                                                        MobModifier[] mods = gson.fromJson(part, MobModifier[].class);
+                                                        modifiers = java.util.Arrays.asList(mods);
+                                                    } catch (Exception e) {
+                                                        Chat.SendAlert(player, "&cInvalid modifiers JSON: " + e.getMessage());
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                            java.util.List<net.minecraft.world.entity.Entity> spawned = Mobs.spawnMobNearPlayer(player, actualMobId, amount, "");
+                                            if (modifiers != null) {
+                                                for (net.minecraft.world.entity.Entity e : spawned) {
+                                                    if (e instanceof net.minecraft.world.entity.Mob mob) {
+                                                        MobModifiers.apply(mob, modifiers);
+                                                    }
+                                                }
+                                                Chat.SendAlert(player, "&7Spawned &bx" + amount + " &7with &b" + modifiers.size() + " modifiers");
+                                            } else {
+                                                Chat.SendAlert(player, "&7Spawned &bx" + amount);
+                                            }
                                             String mobName = actualMobId;
                                             var entityType = net.minecraft.world.entity.EntityType.byString(actualMobId);
                                             if (entityType.isPresent()) {
                                                 mobName = entityType.get().getDescription().getString();
                                             }
-                                            Chat.SendAlert(player, "&7Spawned &bx" + amount + " " + mobName);
                                             String icon = ToastIconHelper.getIconForAction("SPAWN", actualMobId.contains(":") ? actualMobId : "minecraft:" + actualMobId);
                                             PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("SPAWN", "", "Test", amount + "x " + mobName, 0, icon));
                                             return 1;
