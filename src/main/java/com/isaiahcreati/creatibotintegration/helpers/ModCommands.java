@@ -280,13 +280,8 @@ public class ModCommands {
                                                     break;
                                                 }
                                             }
-                                            java.util.List<net.minecraft.world.entity.Entity> spawned = Mobs.spawnMobNearPlayer(player, actualMobId, amount, "");
+                                            Mobs.spawnMobNearPlayer(player, actualMobId, amount, "", modifiers);
                                             if (modifiers != null) {
-                                                for (net.minecraft.world.entity.Entity e : spawned) {
-                                                    if (e instanceof net.minecraft.world.entity.Mob mob) {
-                                                        MobModifiers.apply(mob, modifiers);
-                                                    }
-                                                }
                                                 Chat.SendAlert(player, "&7Spawned &bx" + amount + " &7with &b" + modifiers.size() + " modifiers");
                                             } else {
                                                 Chat.SendAlert(player, "&7Spawned &bx" + amount);

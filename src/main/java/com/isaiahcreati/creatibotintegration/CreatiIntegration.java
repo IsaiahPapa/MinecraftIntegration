@@ -4,7 +4,6 @@ import com.google.gson.*;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
 import com.isaiahcreati.creatibotintegration.helpers.Mobs;
-import com.isaiahcreati.creatibotintegration.helpers.MobModifiers;
 import com.isaiahcreati.creatibotintegration.helpers.OnboardingBook;
 import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
 import com.isaiahcreati.creatibotintegration.helpers.TauntDispatcher;
@@ -29,9 +28,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
@@ -181,14 +178,7 @@ public class CreatiIntegration {
                                 break;
                             case SPAWN:
                                 if (!(payload.details instanceof SpawnDetails spawnDetails)) break;
-                                java.util.List<Entity> spawnedMobs = Mobs.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount, payload.metadata.redeemerName);
-                                if (spawnDetails.modifiers != null && !spawnDetails.modifiers.isEmpty()) {
-                                    for (Entity e : spawnedMobs) {
-                                        if (e instanceof Mob modifiableMob) {
-                                            MobModifiers.apply(modifiableMob, spawnDetails.modifiers);
-                                        }
-                                    }
-                                }
+                                Mobs.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount, payload.metadata.redeemerName, spawnDetails.modifiers);
                                 EntityType mob = Mobs.getMobByName(spawnDetails.mobId);
                                 Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 spawned &bx" + spawnDetails.amount + " " + mob.getDescription().getString());
                                 String spawnIcon = ToastIconHelper.getIconForAction("SPAWN", spawnDetails.mobId.contains(":") ? spawnDetails.mobId : "minecraft:" + spawnDetails.mobId);

@@ -1,5 +1,6 @@
 package com.isaiahcreati.creatibotintegration.helpers;
 
+import com.isaiahcreati.creatibotintegration.integration.MobModifier;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -9,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
@@ -29,6 +31,10 @@ public final class Mobs {
     }
 
     static public List<Entity> spawnMobNearPlayer(ServerPlayer player, String mobId, int amount, String mobName){
+        return spawnMobNearPlayer(player, mobId, amount, mobName, null);
+    }
+
+    static public List<Entity> spawnMobNearPlayer(ServerPlayer player, String mobId, int amount, String mobName, List<MobModifier> modifiers){
         List<Entity> spawned = new ArrayList<>();
         EntityType<?> mob =  getMobByName(mobId);
         if(mob == null) return spawned;
@@ -45,6 +51,18 @@ public final class Mobs {
             };
             mobEntity.setCustomName(Component.literal(mobName));
             mobEntity.setPos(safePosition.x, safePosition.y, safePosition.z);
+
+            // Apply modifiers BEFORE addFreshEntity — attributes like SCALE must be
+            // set before the entity ticks/renders. Also call finalizeSpawn and
+            // setPersistenceRequired so the mob has proper AI and doesn't despawn
+            // (mirrors Taunts.spawnScaledMob at lines 515-560).
+            if (modifiers != null && !modifiers.isEmpty() && mobEntity instanceof Mob modifiableMob) {
+                ServerLevel level = (ServerLevel) player.level();
+                modifiableMob.finalizeSpawn(level, level.getCurrentDifficultyAt(modifiableMob.blockPosition()), EntitySpawnReason.EVENT, null);
+                modifiableMob.setPersistenceRequired();
+                MobModifiers.apply(modifiableMob, modifiers);
+            }
+
             player.level().addFreshEntity(mobEntity);
             spawned.add(mobEntity);
         }
