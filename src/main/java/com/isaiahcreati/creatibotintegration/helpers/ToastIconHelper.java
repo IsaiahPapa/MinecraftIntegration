@@ -29,7 +29,9 @@ public class ToastIconHelper {
             Map.entry("bury", "item:minecraft:dirt"),
             Map.entry("curse_gear", "item:minecraft:enchanted_golden_apple"),
             Map.entry("stack_one", "item:minecraft:paper"),
-            Map.entry("mob_army", "item:minecraft:zombie_head"),
+            Map.entry("gremlin", "item:minecraft:zombie_spawn_egg"),
+            Map.entry("big_mob", "item:minecraft:beef"),
+            Map.entry("tiny_mob", "item:minecraft:slime_ball"),
             Map.entry("anvil_rain", "item:minecraft:anvil"),
             Map.entry("blind_noise", "item:minecraft:spider_eye"),
             Map.entry("rename_chat", "item:minecraft:name_tag"),
@@ -56,7 +58,8 @@ public class ToastIconHelper {
             Map.entry("fisheye", "item:minecraft:glass_bottle"),
             Map.entry("parkour", "item:minecraft:ladder"),
             Map.entry("tntrun", "item:minecraft:tnt"),
-            Map.entry("dropper", "item:minecraft:water_bucket")
+            Map.entry("dropper", "item:minecraft:water_bucket"),
+            Map.entry("sumo", "item:minecraft:iron_sword")
     );
 
     public static String getIconForTaunt(String tauntId) {

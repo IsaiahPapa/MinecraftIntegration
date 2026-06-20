@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modifier System — Decision Flowchart</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0e0e10;
+    color: #efeff1;
+    padding: 40px 20px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 28px; margin-bottom: 8px; }
+  h2 { font-size: 22px; margin: 40px 0 16px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+  h3 { font-size: 17px; margin: 24px 0 12px; color: #bf94ff; }
+  p { margin-bottom: 12px; color: #adadb8; }
+  .subtitle { color: #adadb8; margin-bottom: 32px; font-size: 15px; }
+
+  /* Flowchart nodes */
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 20px 0; }
+  .row { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; align-items: stretch; }
+  .node {
+    border: 2px solid #444;
+    border-radius: 12px;
+    padding: 16px 20px;
+    min-width: 260px;
+    max-width: 300px;
+    background: #1a1a1e;
+    text-align: center;
+    position: relative;
+  }
+  .node.start { border-color: #9147ff; background: #1c1326; }
+  .node.decision { border-color: #ff9900; background: #261c0e; border-radius: 8px; }
+  .node.option { border-color: #2f9e44; background: #0e1c12; }
+  .node.option.bad { border-color: #e54035; background: #261010; }
+  .node.result { border-color: #2f7fd4; background: #0e1a26; }
+  .node.neutral { border-color: #888; }
+  .node-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #adadb8; margin-bottom: 6px; }
+  .node-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .node-detail { font-size: 13px; color: #adadb8; }
+  .node.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-top: 8px; font-weight: 600; }
+  .badge-pass { background: #2f9e44; color: #fff; }
+  .badge-fail { background: #e54035; color: #fff; }
+  .badge-warn { background: #ff9900; color: #000; }
+
+  /* Arrows */
+  .arrow { display: flex; justify-content: center; padding: 12px 0; color: #555; font-size: 24px; }
+  .arrow-label { font-size: 11px; color: #adadb8; text-align: center; margin-top: -8px; margin-bottom: 8px; }
+  .arrow-row { display: flex; justify-content: center; gap: 200px; padding: 8px 0; color: #555; font-size: 24px; }
+  .arrow-row .arrow-col { display: flex; flex-direction: column; align-items: center; }
+  .arrow-row .arrow-col span { font-size: 11px; color: #adadb8; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { border: 1px solid #333; padding: 10px 12px; text-align: left; }
+  th { background: #1a1a1e; color: #bf94ff; font-weight: 600; }
+  td { background: #16161a; }
+  td.pass { color: #4ade80; font-weight: 600; }
+  td.fail { color: #f87171; font-weight: 600; }
+  td.warn { color: #fbbf24; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.highlight { background: #1c1326; }
+
+  /* Cards grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin: 20px 0; }
+  .card {
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 20px;
+    background: #1a1a1e;
+  }
+  .card h4 { font-size: 16px; margin-bottom: 10px; }
+  .card ul { list-style: none; padding: 0; }
+  .card li { font-size: 13px; color: #adadb8; padding: 4px 0; padding-left: 16px; position: relative; }
+  .card li::before { content: "›"; position: absolute; left: 0; color: #9147ff; }
+  .card.recommended { border-color: #4ade80; background: #0e1c12; }
+  .card.recommended h4 { color: #4ade80; }
+  .card.recommended::after { content: "RECOMMENDED"; display: block; text-align: center; font-size: 11px; color: #4ade80; margin-top: 12px; letter-spacing: 1px; font-weight: 700; }
+  .card.discarded { opacity: 0.5; }
+  .card.discarded h4 { text-decoration: line-through; color: #888; }
+
+  .legend { display: flex; gap: 24px; flex-wrap: wrap; margin: 20px 0; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-swatch { width: 16px; height: 16px; border-radius: 4px; border: 2px solid; }
+  .swatch-start { border-color: #9147ff; background: #1c1326; }
+  .swatch-decision { border-color: #ff9900; background: #261c0e; }
+  .swatch-option { border-color: #2f9e44; background: #0e1c12; }
+  .swatch-bad { border-color: #e54035; background: #261010; }
+  .swatch-result { border-color: #2f7fd4; background: #0e1a26; }
+
+  .callout {
+    background: #1c1326;
+    border-left: 4px solid #9147ff;
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout.warn { background: #261c0e; border-color: #ff9900; }
+  .callout.bad { background: #261010; border-color: #e54035; }
+  .callout.good { background: #0e1c12; border-color: #4ade80; }
+
+  .collide-demo { font-family: monospace; font-size: 12px; background: #16161a; padding: 12px; border-radius: 6px; border: 1px solid #333; margin: 12px 0; white-space: pre; overflow-x: auto; }
+
+  .toggle-group { margin: 16px 0; }
+  .toggle-group label { display: inline-block; padding: 6px 14px; border: 1px solid #333; border-radius: 6px; margin: 2px; cursor: pointer; font-size: 13px; }
+  .toggle-group input[type=checkbox] { display: none; }
+  .toggle-group input:checked + label { background: #9147ff; border-color: #9147ff; color: #fff; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Modifier System — Decision Flowchart</h1>
+  <p class="subtitle">Visualizing the full pathway from the core problem through every option we explored, with SKU math and tradeoffs.</p>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch swatch-start"></div> Start / Goal</div>
+    <div class="legend-item"><div class="legend-swatch swatch-decision"></div> Decision Point</div>
+    <div class="legend-item"><div class="legend-swatch swatch-option"></div> Viable Option</div>
+    <div class="legend-item"><div class="legend-swatch swatch-bad"></div> Dead End / Discarded</div>
+    <div class="legend-item"><div class="legend-swatch swatch-result"></div> Outcome</div>
+  </div>
+
+  <!-- SECTION 1: THE CORE PROBLEM -->
+  <h2>1. The Core Problem</h2>
+  <div class="flow">
+    <div class="node start">
+      <div class="node-label">Goal</div>
+      <div class="node-title">Viewers pay bits to spawn mobs with modifiers</div>
+      <div class="node-detail">"A zombie with a knockback stick", "a tiny mob with sharpness 5", etc.<br>Upcharge = more bits = bigger cut for us</div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Constraint</div>
+      <div class="node-title">Twitch bits = fixed-SKU products only</div>
+      <div class="node-detail">Can't charge arbitrary amounts.<br>Each price = one registered SKU (max 250 products).<br>One SKU per transaction — can't combine SKUs.</div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Key Question</div>
+      <div class="node-title">How to map variable "base + modifiers" to fixed SKUs?</div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: PRICING MODEL OPTIONS -->
+  <h2>2. Pricing Model Options Explored</h2>
+  <div class="flow">
+    <div class="row">
+      <div class="node bad">
+        <div class="node-label">Option A — Discarded</div>
+        <div class="node-title">SKU per combination</div>
+        <div class="node-detail">Register a product for each specific combo<br>(base 100 + Big + Speed = its own SKU)</div>
+        <div class="badge badge-fail">FACTORIAL EXPLOSION</div>
+        <div class="node-detail" style="margin-top:8px">2⁷ modifiers × N bases = thousands of SKUs<br>Far exceeds the 250 limit.</div>
+      </div>
+      <div class="node bad">
+        <div class="node-label">Option B — Discarded</div>
+        <div class="node-title">Two transactions</div>
+        <div class="node-detail">Pay for modifiers, then pay for base<br>Two separate useBits() calls</div>
+        <div class="badge badge-fail">BAD UX / FRICTION</div>
+        <div class="node-detail" style="margin-top:8px">Double the purchase dialogs.<br>Viewer bails. You hated this.</div>
+      </div>
+      <div class="node bad">
+        <div class="node-label">Option C — Discarded</div>
+        <div class="node-title">Separate currency</div>
+        <div class="node-detail">Convert bits → internal balance, spend that</div>
+        <div class="badge badge-fail">DOUBLE-LOADING</div>
+        <div class="node-detail" style="margin-top:8px">You "load" bits, then "load" again?<br>You've always hated this flow.</div>
+      </div>
+    </div>
+    <div class="arrow">↓ ↓ ↓</div>
+    <div class="arrow-label">all discarded — too many SKUs, too much friction, or redundant currency</div>
+    <div class="arrow">↓</div>
+    <div class="row">
+      <div class="node option">
+        <div class="node-label">Option D — The Winner</div>
+        <div class="node-title">Dense SKU grid + sum-then-match</div>
+        <div class="node-detail">Register SKUs at every multiple of 5.<br>Frontend sums base + selected modifiers.<br>Find the exact SKU matching that total.<br><strong>One useBits() call. Zero premium.</strong></div>
+        <div class="badge badge-pass">WORKS</div>
+        <div class="node-detail" style="margin-top:8px">Key insight: different modifier combos<br>that sum to the same number reuse ONE SKU.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collision demo -->
+  <h3>Why it's not factorial — the "collapse"</h3>
+  <p>2⁷ = 128 on/off modifier combinations, but their sums overlap heavily. Multiple combos producing the same total reuse a single SKU.</p>
+  <div class="collide-demo">Modifier-sum 15:  "KB Stick(15)"              OR  "Baby(5) + Speed(10)"
+Modifier-sum 25:  "Big(25)"                   OR  "Tiny(25)"  OR  "Baby+Sharp"  OR  "Baby+KB+..."   (4 combos!)
+Modifier-sum 35:  "Speed+Big(10+25)"          OR  "Speed+Tiny"  OR  "KB+Sharp(15+20)"  OR  ...       (4 combos!)
+Modifier-sum 50:  "Diamond(50)"               OR  "Big+Tiny+..."(multiple)                         (many!)
+
+128 combinations → only 31 distinct sums (0, 5, 10, 15, ... 150)</div>
+
+  <!-- SECTION 3: SKU BUDGET PROOF -->
+  <h2>3. SKU Budget — Mathematical Proof</h2>
+  <p>Verified: every possible (base × modifier-combination) total maps to exactly one registered SKU. Zero uncovered combinations.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        <th>Base cap</th>
+        <th>Bases</th>
+        <th>Distinct totals</th>
+        <th>Already registered</th>
+        <th>New SKUs needed</th>
+        <th>Total SKUs</th>
+        <th>Remaining (of 250)</th>
+        <th>Uncovered</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A</td>
+        <td class="num">≤ 150</td>
+        <td class="num">10</td>
+        <td class="num">60</td>
+        <td class="num">16</td>
+        <td class="num">44</td>
+        <td class="num">70</td>
+        <td class="num">180</td>
+        <td class="pass">0 — PASS</td>
+      </tr>
+      <tr class="highlight">
+        <td>B</td>
+        <td class="num">≤ 300</td>
+        <td class="num">16</td>
+        <td class="num">90</td>
+        <td class="num">17</td>
+        <td class="num">73</td>
+        <td class="num">99</td>
+        <td class="num">151</td>
+        <td class="pass">0 — PASS</td>
+      </tr>
+      <tr>
+        <td>B (500)</td>
+        <td class="num">≤ 500</td>
+        <td class="num">18</td>
+        <td class="num">130</td>
+        <td class="num">18</td>
+        <td class="num">112</td>
+        <td class="num">138</td>
+        <td class="num">112</td>
+        <td class="pass">0 — PASS</td>
+      </tr>
+      <tr>
+        <td>C</td>
+        <td class="num">All (≤ 10000)</td>
+        <td class="num">26</td>
+        <td class="num">378</td>
+        <td class="num">16</td>
+        <td class="num">352</td>
+        <td class="num">378</td>
+        <td class="fail">−128</td>
+        <td class="fail">EXCEEDS LIMIT</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout good">
+    <strong>Proof: Scenario B (cap 300) — 73 new SKUs, 99 total, 0 uncovered.</strong><br>
+    2,048 total base×modifier combinations → 90 distinct totals → 90 exact-match SKUs (17 already exist).<br>
+    Compression: 22.8× (up to 45 different combos share one SKU).
+  </div>
+
+  <!-- SECTION 4: QUANTITY QUESTION -->
+  <h2>4. The Quantity Question</h2>
+  <p>Yazan's idea also included spawning multiple mobs (e.g. 3 silverfish). This created a new pricing problem.</p>
+
+  <div class="flow">
+    <div class="node decision">
+      <div class="node-label">Problem</div>
+      <div class="node-title">"Extra mob" value scales with base price</div>
+      <div class="node-detail">Fixed-cost modifier: +25 bits on a 10-bit item = scam;<br>+25 bits on a 200-bit item = steal.<br>No single number works across the range.</div>
+    </div>
+    <div class="arrow">↓</div>
+  </div>
+
+  <div class="grid">
+    <div class="card discarded">
+      <h4>Percentage-based (+50% of base)</h4>
+      <ul>
+        <li>Base 25 → +12.5 → not multiple of 5</li>
+        <li>Breaks the exact-match SKU guarantee</li>
+        <li>Reintroduces premiums / snapping</li>
+      </ul>
+      <div class="badge badge-fail">BREAKS GRID MATH</div>
+    </div>
+    <div class="card">
+      <h4>Dynamic tiers (viewer picks 1/3/5)</h4>
+      <ul>
+        <li>1× / 2× / 4× multipliers (clean on grid)</li>
+        <li>Tiers + modifiers on bulk = 250+ SKUs</li>
+        <li>FAILS at base ≤300 (276 total)</li>
+        <li>Fits only at base ≤75 (73 SKUs)</li>
+      </ul>
+      <div class="badge badge-warn">TIGHT / TINY BASE CAP</div>
+    </div>
+    <div class="card">
+      <h4>Streamer sets quantity, viewer adds modifiers</h4>
+      <ul>
+        <li>Quantity is part of item config (like now)</li>
+        <li>Viewer still picks modifiers dynamically</li>
+        <li>73 SKUs, base ≤300 — clean fit</li>
+        <li>Edge case: bulk items priced >300 lose modifiers</li>
+      </ul>
+      <div class="badge badge-warn">EDGE CASE</div>
+    </div>
+    <div class="card recommended">
+      <h4>Raise cap to 500 + streamer sets quantity</h4>
+      <ul>
+        <li>Streamer sets quantity AND base price</li>
+        <li>Viewer adds modifiers dynamically</li>
+        <li>"5 big fast zombies" IS possible</li>
+        <li>112 new SKUs, 138 total, 112 free</li>
+        <li>Preserves the fun combo</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Revenue comparison -->
+  <h3>Revenue reality check (the "discount" fear)</h3>
+  <p>The "lost revenue" from bulk is mostly theoretical — viewers won't do 5 separate transactions. The real choice is between 1 mob vs. a bulk bundle.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Base</th>
+        <th>(A) 1 mob + mods</th>
+        <th>(B) 3 mobs bulk + mods once</th>
+        <th>(C) 3 mobs per-mob pricing</th>
+        <th>B vs A (real gain)</th>
+        <th>C — would they pay it?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">10</td><td class="num">45</td><td class="num">60</td><td class="num">135</td><td class="num pass">+15</td><td class="warn">unlikely</td></tr>
+      <tr><td class="num">25</td><td class="num">60</td><td class="num">97</td><td class="num">180</td><td class="num pass">+37</td><td class="warn">unlikely</td></tr>
+      <tr><td class="num">50</td><td class="num">85</td><td class="num">160</td><td class="num">255</td><td class="num pass">+75</td><td class="warn">maybe</td></tr>
+      <tr class="highlight"><td class="num">100</td><td class="num">135</td><td class="num">285</td><td class="num">405</td><td class="num pass">+150</td><td class="fail">no</td></tr>
+      <tr><td class="num">150</td><td class="num">185</td><td class="num">410</td><td class="num">555</td><td class="num pass">+225</td><td class="fail">no</td></tr>
+      <tr><td class="num">300</td><td class="num">335</td><td class="num">785</td><td class="num">1005</td><td class="num pass">+450</td><td class="fail">no</td></tr>
+    </tbody>
+  </table>
+  <div class="callout good">
+    Bulk captures <strong>+150 bits</strong> at base 100 vs. the realistic baseline (1 mob).<br>
+    The "lost" 120 bits (C−B) was never capturable — viewers bail at 405 and just buy option A.
+  </div>
+
+  <!-- SECTION 5: THE DECISION TREE -->
+  <h2>5. The Final Decision Tree</h2>
+  <div class="flow">
+    <div class="node start">
+      <div class="node-label">Start</div>
+      <div class="node-title">Build pay-per-modifier for mob spawns</div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Decision 1</div>
+      <div class="node-title">Entry path: channel points vs. bits?</div>
+      <div class="node-detail">You said "not channel points, the extension"</div>
+    </div>
+    <div class="arrow-row">
+      <div class="arrow-col">↓<span>bits path</span></div>
+    </div>
+    <div class="row">
+      <div class="node result">
+        <div class="node-label">Resolved</div>
+        <div class="node-title">Bits/extension path only (for now)</div>
+        <div class="node-detail">Channel-points path gets modifier types for free via shared Minecraft.ts, but no viewer picker. Streamers pre-configure.</div>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Decision 2</div>
+      <div class="node-title">Modifier catalog: who defines it?</div>
+    </div>
+    <div class="arrow-row">
+      <div class="arrow-col">↓<span>global, fixed</span></div>
+      <div class="arrow-col">↓<span>per-streamer</span></div>
+    </div>
+    <div class="row">
+      <div class="node result">
+        <div class="node-label">Resolved</div>
+        <div class="node-title">Global catalog, fixed costs</div>
+        <div class="node-detail">7 modifiers, low-cost scale, all multiples of 5.<br>Same for every streamer (MVP).</div>
+      </div>
+      <div class="node neutral">
+        <div class="node-label">Future</div>
+        <div class="node-title">Per-streamer enable/cost</div>
+        <div class="node-detail">Later phase — streamer toggles which modifiers they allow.</div>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Decision 3</div>
+      <div class="node-title">Pricing model: how to map to SKUs?</div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="row">
+      <div class="node result">
+        <div class="node-label">Resolved</div>
+        <div class="node-title">Dense grid + sum-then-exact-match</div>
+        <div class="node-detail">Register every multiple of 5 in range.<br>Frontend sums base + mods, finds exact SKU.<br>One transaction, zero premium.</div>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Decision 4</div>
+      <div class="node-title">Base price cap?</div>
+      <div class="node-detail">High bases (500+) blow up SKU count.<br>Cap base for modifier-enabled items.</div>
+    </div>
+    <div class="arrow-row">
+      <div class="arrow-col">↓<span>≤300 (73 SKUs)</span></div>
+      <div class="arrow-col">↓<span>≤500 (112 SKUs)</span></div>
+    </div>
+    <div class="row">
+      <div class="node option">
+        <div class="node-label">Option</div>
+        <div class="node-title">Cap at 300</div>
+        <div class="node-detail">73 new SKUs, 99 total, 151 free.<br>Edge case: bulk items >300 lose modifiers.</div>
+      </div>
+      <div class="node option">
+        <div class="node-label">Option</div>
+        <div class="node-title">Cap at 500</div>
+        <div class="node-detail">112 new SKUs, 138 total, 112 free.<br>"5 big fast zombies" IS possible.<br>+39 SKUs vs 300 cap.</div>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Decision 5</div>
+      <div class="node-title">Quantity: who controls it?</div>
+      <div class="node-detail">"Extra mob" can't be a fixed-cost modifier (scam/steal problem).<br>Quantity must be either viewer-picked tiers or streamer-configured.</div>
+    </div>
+    <div class="arrow-row">
+      <div class="arrow-col">↓<span>viewer tiers</span></div>
+      <div class="arrow-col">↓<span>streamer sets qty</span></div>
+    </div>
+    <div class="row">
+      <div class="node bad">
+        <div class="node-label">Discarded</div>
+        <div class="node-title">Viewer picks quantity tier</div>
+        <div class="node-detail">Tiers + mods on bulk = 250+ SKUs (fails at ≤300).<br>Only fits at base ≤75 — too restrictive.<br>Also: streamer loses control of bulk pricing.</div>
+      </div>
+      <div class="node result">
+        <div class="node-label">Resolved</div>
+        <div class="node-title">Streamer sets quantity per item</div>
+        <div class="node-detail">Quantity is a field on the item config (like existing SpawnMobDetail.amount).<br>Streamers create "1 zombie" / "3 zombies" / "5 silverfish" as separate items.<br>Viewer adds modifiers dynamically on whichever they pick.</div>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node decision">
+      <div class="node-label">Decision 6</div>
+      <div class="node-title">If cap is 300 and streamer wants 5 zombies at base 400 — no modifiers?</div>
+      <div class="node-detail">This is the edge case you raised.</div>
+    </div>
+    <div class="arrow-row">
+      <div class="arrow-col">↓<span>accept edge case</span></div>
+      <div class="arrow-col">↓<span>raise cap to 500</span></div>
+    </div>
+    <div class="row">
+      <div class="node option">
+        <div class="node-label">Option</div>
+        <div class="node-title">Cap 300 — accept limitation</div>
+        <div class="node-detail">73 SKUs, 151 free.<br>Bulk items priced >300 are modifier-free.<br>Streamers who want mods keep base ≤300.</div>
+      </div>
+      <div class="node option">
+        <div class="node-label">Option</div>
+        <div class="node-title">Cap 500 — preserve fun combos</div>
+        <div class="node-detail">112 SKUs, 112 free.<br>"5 big fast zombies" works.<br>The feature's best moment is possible.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 6: THE TWO FINAL OPTIONS -->
+  <h2>6. The Two Remaining Options</h2>
+  <div class="grid">
+    <div class="card">
+      <h4>Option 1 — Cap 300, streamer sets qty</h4>
+      <ul>
+        <li>73 new SKUs registered (every multiple of 5, 5–450)</li>
+        <li>99 total SKUs, 151 free for future features</li>
+        <li>Streamer configures quantity per item (1, 3, 5...)</li>
+        <li>Viewer adds modifiers dynamically (7 options)</li>
+        <li>Base price cap: 300 bits for modifier-enabled items</li>
+        <li>Edge case: bulk items >300 bits = no modifiers</li>
+        <li>Most SKU headroom for future (reverb on sound, etc.)</li>
+      </ul>
+    </div>
+    <div class="card recommended">
+      <h4>Option 2 — Cap 500, streamer sets qty</h4>
+      <ul>
+        <li>112 new SKUs registered (every multiple of 5, 5–650)</li>
+        <li>138 total SKUs, 112 free for future features</li>
+        <li>Streamer configures quantity per item (1, 3, 5...)</li>
+        <li>Viewer adds modifiers dynamically (7 options)</li>
+        <li>Base price cap: 500 bits for modifier-enabled items</li>
+        <li>"5 big fast zombies" at base 400 IS possible</li>
+        <li>Preserves the feature's most fun combination</li>
+        <li>Still plenty of SKU headroom</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SECTION 7: MODIFIER CATALOG -->
+  <h2>7. The Modifier Catalog (MVP)</h2>
+  <table>
+    <thead>
+      <tr><th>Modifier</th><th>Cost (bits)</th><th>Java primitive (proven in)</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Baby</td><td class="num">5</td><td>setBaby() — Taunts.spawnGremlin:570</td><td>Spawns baby variant (faster, smaller, cuter/scariesr)</td></tr>
+      <tr><td>Speed</td><td class="num">10</td><td>MOVEMENT_SPEED ×1.8 — Taunts:543-545</td><td>Mob moves faster</td></tr>
+      <tr><td>Knockback Stick</td><td class="num">15</td><td>EquipmentSlot.MAINHAND + enchant — Taunts.curseGear:426</td><td>Mob holds a stick with Knockback 5 (punts the player)</td></tr>
+      <tr><td>Sharpness Sword</td><td class="num">20</td><td>EquipmentSlot.MAINHAND + enchant</td><td>Mob holds a sword with Sharpness 5</td></tr>
+      <tr><td>Big</td><td class="num">25</td><td>Attributes.SCALE = 3.0 — Taunts:512-514</td><td>Mob is 3× size, +50% health, knockback-resistant</td></tr>
+      <tr><td>Tiny</td><td class="num">25</td><td>Attributes.SCALE = 0.25 — Taunts:512-514</td><td>Mob is 0.25× size, 4 HP, faster</td></tr>
+      <tr><td>Diamond Armor</td><td class="num">50</td><td>EquipmentSlot.CHEST — Taunts.spawnGremlin</td><td>Mob wears diamond chestplate (high armor)</td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Max modifier stack:</strong> 5+10+15+20+25+25+50 = 150 bits.<br>
+    <strong>All costs are multiples of 5</strong> — keeps totals on the SKU grid.
+  </div>
+
+  <!-- SECTION 8: EXAMPLE FLOWS -->
+  <h2>8. Example Purchase Flows</h2>
+
+  <div class="callout good">
+    <strong>Flow 1 — Simple:</strong> Base 100 zombie + Big(25) + Speed(10) = 135 → <code>useBits("value135")</code> → 1 big fast zombie
+  </div>
+  <div class="callout good">
+    <strong>Flow 2 — Full punish (the dream):</strong> Base 400 "5 zombies" item + Big(25) + KB Stick(15) + Diamond(50) = 490 → <code>useBits("value490")</code> → 5 big zombies with knockback sticks and diamond armor
+    <br><em>(only possible with cap 500; requires base ≤300 otherwise)</em>
+  </div>
+  <div class="callout good">
+    <strong>Flow 3 — Yazan's original idea:</strong> Base 25 + Tiny(25) + KB Stick(15) = 65 → <code>useBits("value65")</code> → 1 tiny zombie that punts you
+  </div>
+  <div class="callout good">
+    <strong>Flow 4 — No modifiers:</strong> Base 50 "3 zombies" item, viewer adds nothing → 50 → <code>useBits("value50")</code> (already exists!) → 3 plain zombies
+  </div>
+
+  <!-- SECTION 9: ARCHITECTURE -->
+  <h2>9. Implementation Architecture (5 repos)</h2>
+  <table>
+    <thead>
+      <tr><th>Repo</th><th>Role</th><th>Work</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Twitch console</td><td>Catalog</td><td>Register 73 (or 112) new SKUs — every multiple of 5 in range, one-time script</td></tr>
+      <tr><td>types.isaiahcreati.com</td><td>Shared types</td><td>MobModifier type, MODIFIER_CATALOG constant, MinecraftFeatureExtension, MinecraftInteraction, priceMath helpers</td></tr>
+      <tr><td>MinecraftIntegration (this repo)</td><td>The mod</td><td>SpawnDetails + modifiers field, MobModifier POJO, MobModifiers.apply() helper (reuses Taunts.java primitives), wire into SPAWN case</td></tr>
+      <tr><td>api.isaiahcreati.com</td><td>EBS validation</td><td>Serve catalog in GET /api/extension, extend price validation to accept base+mods sum, enforce base cap</td></tr>
+      <tr><td>alerts.isaiahcreati.com</td><td>Socket bridge</td><td>New bits-path Minecraft handler (mirrors rewards-path one), register in extension handlers</td></tr>
+      <tr><td>extension.isaiahcreati.com</td><td>Frontend UI</td><td>Minecraft feature modal, modifier toggle picker, live total, snap to product, build MinecraftInteraction</td></tr>
+      <tr><td>bot.isaiahcreati.com</td><td>Dashboard (optional)</td><td>Add Minecraft to extension item config, base price cap UI, quantity field</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Interactive calculator -->
+  <h2>10. Interactive Price Calculator</h2>
+  <p>Toggle modifiers on a base price to see the total and which SKU it resolves to.</p>
+  <div class="callout">
+    <label>Base price:
+      <select id="basePrice">
+        <option value="5">5 bits</option>
+        <option value="10">10 bits</option>
+        <option value="15">15 bits</option>
+        <option value="20">20 bits</option>
+        <option value="25" selected>25 bits</option>
+        <option value="50">50 bits</option>
+        <option value="75">75 bits</option>
+        <option value="100">100 bits</option>
+        <option value="125">125 bits</option>
+        <option value="150">150 bits</option>
+        <option value="175">175 bits</option>
+        <option value="200">200 bits</option>
+        <option value="225">225 bits</option>
+        <option value="250">250 bits</option>
+        <option value="275">275 bits</option>
+        <option value="300">300 bits</option>
+        <option value="400">400 bits (cap 500 only)</option>
+        <option value="500">500 bits (cap 500 only)</option>
+      </select>
+    </label>
+  </div>
+  <div class="toggle-group" id="modifierToggles">
+    <label><input type="checkbox" value="5"><span>👶 Baby (+5)</span></label>
+    <label><input type="checkbox" value="10"><span>💨 Speed (+10)</span></label>
+    <label><input type="checkbox" value="15"><span>🏓 Knockback Stick (+15)</span></label>
+    <label><input type="checkbox" value="20"><span>⚔️ Sharpness Sword (+20)</span></label>
+    <label><input type="checkbox" value="25"><span>🐘 Big (+25)</span></label>
+    <label><input type="checkbox" value="25"><span>🐜 Tiny (+25)</span></label>
+    <label><input type="checkbox" value="50"><span>💎 Diamond Armor (+50)</span></label>
+  </div>
+  <div class="callout good" id="result" style="font-size: 16px;">
+    Total: 25 bits → <code>value25</code>
+  </div>
+
+  <script>
+    const baseSelect = document.getElementById('basePrice');
+    const toggles = document.querySelectorAll('#modifierToggles input');
+    const result = document.getElementById('result');
+    const caps = { 300: 'cap 300', 500: 'cap 500' };
+
+    function calc() {
+      const base = parseInt(baseSelect.value);
+      let modSum = 0;
+      const active = [];
+      toggles.forEach(t => {
+        if (t.checked) {
+          modSum += parseInt(t.value);
+          active.push(t.nextElementSibling.textContent);
+        }
+      });
+      const total = base + modSum;
+      const capOk300 = base <= 300;
+      const capOk500 = base <= 500;
+      let html = `Base: ${base} bits + Modifiers: ${modSum} bits = <strong>${total} bits</strong> → <code>value${total}</code><br>`;
+      html += `Active modifiers: ${active.length ? active.join(', ') : 'none'}<br>`;
+      if (capOk300) {
+        html += `<span style="color:#4ade80">✓ Fits cap 300 (73 SKUs)</span> `;
+      } else {
+        html += `<span style="color:#f87171">✗ Base ${base} > 300 — modifiers disabled at this cap</span> `;
+      }
+      if (capOk500) {
+        html += `<span style="color:#4ade80">✓ Fits cap 500 (112 SKUs)</span>`;
+      } else {
+        html += `<span style="color:#f87171">✗ Base ${base} > 500 — modifiers disabled</span>`;
+      }
+      result.innerHTML = html;
+    }
+    baseSelect.addEventListener('change', calc);
+    toggles.forEach(t => t.addEventListener('change', calc));
+    calc();
+  </script>
+
+</div>
+</body>
+</html>

@@ -9,6 +9,7 @@ import net.minecraft.world.level.GameType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -48,6 +49,7 @@ public class MinigameEventHandler {
         Taunts.tickRenames();
         Taunts.tickHotPotatoes();
         Taunts.tickLuckyBlocks();
+        Taunts.tickGremlins();
         if (Config.QUEUE_ENABLED.get()) {
             QueueManager.tick(event);
         }
@@ -69,15 +71,38 @@ public class MinigameEventHandler {
     @SubscribeEvent
     public void onPlayerHurt(LivingDamageEvent.Pre event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (!MinigameDimension.isMinigameDimension(player.level())) return;
 
-        Minigame game = getActiveMinigameForPlayer(player);
-        if (game == null) return;
+        net.minecraft.world.entity.Entity sourceEntity = event.getSource().getEntity();
+        if (sourceEntity == null) sourceEntity = event.getSource().getDirectEntity();
 
-        if (event.getSource().is(DamageTypes.FALL) ||
-            event.getSource().is(DamageTypes.FELL_OUT_OF_WORLD)) {
-            event.setNewDamage(0);
+        if (MinigameDimension.isMinigameDimension(player.level())) {
+            Minigame game = getActiveMinigameForPlayer(player);
+            if (game != null) {
+                if (event.getSource().is(DamageTypes.FALL) ||
+                    event.getSource().is(DamageTypes.FELL_OUT_OF_WORLD)) {
+                    event.setNewDamage(0);
+                }
+            }
         }
+
+        if (sourceEntity != null) {
+            Taunts.onPlayerHurtByGremlin(player, sourceEntity);
+        }
+    }
+
+    @SubscribeEvent
+    public void onEntityDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof net.minecraft.world.entity.LivingEntity living) {
+            Taunts.onGremlinDeath(living);
+        }
+    }
+
+    @SubscribeEvent
+    public void onExplosionDetonate(ExplosionEvent.Detonate event) {
+        if (!MinigameDimension.isMinigameDimension(event.getLevel())) return;
+        // Prevent explosions (e.g. creepers) from destroying arena blocks.
+        // Entity damage is preserved; only block removal is blocked.
+        event.getAffectedBlocks().clear();
     }
 
     @SubscribeEvent

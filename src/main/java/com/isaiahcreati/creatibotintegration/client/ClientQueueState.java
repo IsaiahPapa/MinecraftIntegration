@@ -49,6 +49,7 @@ public class ClientQueueState {
             case "parkour" -> "Parkour";
             case "tntrun" -> "TNT Run";
             case "dropper" -> "Dropper";
+            case "sumo" -> "Arena";
             case "blur" -> "Blur";
             case "inverted_colors" -> "Inverted Colors";
             case "black_and_white" -> "1950s";
@@ -92,7 +93,9 @@ public class ClientQueueState {
             case "bury" -> "Buried Alive";
             case "curse_gear" -> "Cursed";
             case "stack_one" -> "Stack of One";
-            case "mob_army" -> "Mob Army";
+            case "gremlin" -> "Gremlin";
+            case "big_mob" -> "Big Mob";
+            case "tiny_mob" -> "Tiny Mob";
             case "anvil_rain" -> "Anvil Rain";
             case "blind_noise" -> "Blind Panic";
             case "rename_chat" -> "Rename the Streamer";

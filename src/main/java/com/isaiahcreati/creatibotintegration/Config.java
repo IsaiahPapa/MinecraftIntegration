@@ -20,6 +20,11 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Boolean> DROPPER_ENABLED;
     public static final ModConfigSpec.ConfigValue<Integer> DROPPER_FAIL_DAMAGE;
     public static final ModConfigSpec.ConfigValue<Integer> DROPPER_WATER_SIZE;
+    public static final ModConfigSpec.ConfigValue<Boolean> SUMO_ENABLED;
+    public static final ModConfigSpec.ConfigValue<Integer> SUMO_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Integer> SUMO_ARENA_RADIUS;
+    public static final ModConfigSpec.ConfigValue<Integer> SUMO_MOB_MIN_COUNT;
+    public static final ModConfigSpec.ConfigValue<Integer> SUMO_MOB_MAX_COUNT;
     public static final ModConfigSpec.ConfigValue<Boolean> QUEUE_ENABLED;
     public static final ModConfigSpec.ConfigValue<Boolean> SIDEBAR_VISIBLE;
     public static final ModConfigSpec.ConfigValue<Boolean> ACTIVITY_FEED_VISIBLE;
@@ -32,7 +37,7 @@ public class Config {
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final String CATEGORY_QUEUE = "Queue";
-    public static final int CURRENT_CONFIG_VERSION = 9;
+    public static final int CURRENT_CONFIG_VERSION = 11;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -118,6 +123,30 @@ public class Config {
 
         builder.pop();
 
+        builder.comment("Sumo Arena Settings").push("Sumo");
+
+        SUMO_ENABLED = builder
+                .comment("Enable the Sumo Arena minigame")
+                .define("sumo.enabled", true);
+
+        SUMO_FAIL_DAMAGE = builder
+                .comment("Damage dealt on being knocked off the arena (2 damage = 1 heart)")
+                .defineInRange("sumo.fail_damage", 8, 0, 40);
+
+        SUMO_ARENA_RADIUS = builder
+                .comment("Radius of the sumo platform (blocks)")
+                .defineInRange("sumo.arena_radius", 8, 4, 12);
+
+        SUMO_MOB_MIN_COUNT = builder
+                .comment("Minimum number of mobs spawned in the arena ring")
+                .defineInRange("sumo.mob_min_count", 3, 1, 30);
+
+        SUMO_MOB_MAX_COUNT = builder
+                .comment("Maximum number of mobs spawned in the arena ring")
+                .defineInRange("sumo.mob_max_count", 5, 1, 40);
+
+        builder.pop();
+
         builder.comment("Queue Settings").push(CATEGORY_QUEUE);
 
         QUEUE_ENABLED = builder
@@ -175,6 +204,11 @@ public class Config {
         DROPPER_ENABLED.set(true);
         DROPPER_FAIL_DAMAGE.set(8);
         DROPPER_WATER_SIZE.set(2);
+        SUMO_ENABLED.set(true);
+        SUMO_FAIL_DAMAGE.set(8);
+        SUMO_ARENA_RADIUS.set(8);
+        SUMO_MOB_MIN_COUNT.set(3);
+        SUMO_MOB_MAX_COUNT.set(5);
         QUEUE_ENABLED.set(true);
         SIDEBAR_VISIBLE.set(true);
         ACTIVITY_FEED_VISIBLE.set(true);

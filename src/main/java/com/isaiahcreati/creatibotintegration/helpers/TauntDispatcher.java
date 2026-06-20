@@ -17,10 +17,14 @@ public class TauntDispatcher {
     }
 
     public static boolean dispatchTaunt(ServerPlayer player, String tauntId) {
-        return dispatchTaunt(player, tauntId, 15);
+        return dispatchTaunt(player, tauntId, 15, null);
     }
 
     public static boolean dispatchTaunt(ServerPlayer player, String tauntId, int clientEffectDuration) {
+        return dispatchTaunt(player, tauntId, clientEffectDuration, null);
+    }
+
+    public static boolean dispatchTaunt(ServerPlayer player, String tauntId, int clientEffectDuration, String mobType) {
         ServerLevel overworld = player.level().getServer().overworld();
 
         switch (tauntId) {
@@ -36,6 +40,7 @@ public class TauntDispatcher {
             case "parkour" -> CreatiIntegration.getParkourMinigame().enterPlayer(player, "Dev");
             case "tntrun" -> CreatiIntegration.getTntRunMinigame().enterPlayer(player, "Dev");
             case "dropper" -> CreatiIntegration.getDropperMinigame().enterPlayer(player, "Dev");
+            case "sumo" -> CreatiIntegration.getSumoMinigame().enterPlayer(player, "Dev");
             case "drop_all" -> Taunts.dropAllInventory(player);
             case "half_heart" -> Taunts.setHalfHeart(player);
             case "hungry" -> Taunts.drainHunger(player);
@@ -51,7 +56,9 @@ public class TauntDispatcher {
             case "bury"           -> Taunts.buryPlayer(player);
             case "curse_gear"     -> Taunts.curseGear(player);
             case "stack_one"      -> Taunts.reduceStacksToOne(player);
-            case "mob_army"       -> Taunts.spawnMobArmy(player);
+            case "gremlin"        -> Taunts.spawnGremlin(player);
+            case "big_mob"        -> Taunts.spawnScaledMob(player, mobType, 3.0f);
+            case "tiny_mob"       -> Taunts.spawnScaledMob(player, mobType, 0.25f);
             case "anvil_rain"    -> Taunts.anvilRain(player);
             case "blind_noise"   -> Taunts.blindNoise(player);
             case "rename_chat"   -> Taunts.renameChat(player);

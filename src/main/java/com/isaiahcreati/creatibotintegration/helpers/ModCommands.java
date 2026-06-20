@@ -46,7 +46,8 @@ public class ModCommands {
             "chicken_rain", "meteor_rain", "raid",
             "fire_trail", "downgrade_gear",
             "anvil", "bury", "curse_gear", "stack_one",
-            "mob_army", "anvil_rain", "blind_noise",
+            "gremlin", "big_mob", "tiny_mob",
+            "anvil_rain", "blind_noise",
             "rename_chat", "hot_potato", "lucky_block"
     };
 
@@ -60,7 +61,7 @@ public class ModCommands {
     };
 
     private static final String[] MINIGAME_TAUNTS = {
-            "parkour", "tntrun", "dropper"
+            "parkour", "tntrun", "dropper", "sumo"
     };
 
     private static final Permission HAS_OP = new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS);
@@ -406,6 +407,41 @@ public class ModCommands {
                                                 })
                                         )
                                 )
+                                .then(Commands.literal("sumo")
+                                        .then(Commands.literal("start")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (CreatiIntegration.getSumoMinigame().isInMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are already in an Arena session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getSumoMinigame().enterPlayer(player, "Dev");
+                                                    return 1;
+                                                })
+                                        )
+                                        .then(Commands.literal("leave")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (!CreatiIntegration.getSumoMinigame().isInActiveMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("You are not in an Arena session!").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF5555").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getSumoMinigame().exitPlayer(player, true);
+                                                    return 1;
+                                                })
+                                        )
+                                        .then(Commands.literal("forceexit")
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    if (!CreatiIntegration.getSumoMinigame().isInMinigame(player)) {
+                                                        player.sendSystemMessage(Component.literal("No active Arena session.").withStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow())));
+                                                        return 0;
+                                                    }
+                                                    CreatiIntegration.getSumoMinigame().handlePlayerReconnect(player);
+                                                    return 1;
+                                                })
+                                        )
+                                )
                         )
                         // /creati test notify <type> [name] [redeemer] [position]
                         .then(Commands.literal("notify")
@@ -502,7 +538,7 @@ public class ModCommands {
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test spawn \u00a7f<mobId> [amount]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test potion \u00a7f<effectId> [duration] [amplifier]"));
-        player.sendSystemMessage(Component.literal("\u00a77/creati test minigame \u00a7f<parkour|tntrun|dropper> <start|leave|forceexit>"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test minigame \u00a7f<parkour|tntrun|dropper|sumo> <start|leave|forceexit>"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test notify \u00a7f<type> [name] [redeemer] [position]"));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
     }

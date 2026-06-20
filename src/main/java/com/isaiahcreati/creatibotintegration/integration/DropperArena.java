@@ -257,23 +257,22 @@ public class DropperArena {
                     double dz = z - CENTER_Z;
                     double dist = Math.sqrt(dx * dx + dz * dz);
 
-                    // Only place the shell: distance must be near the slice
-                    // ring at every level (including the base) so the dome is
-                    // a pure hollow shell — no flat filled disk on the bottom.
-                    if (Math.abs(dist - sliceRadius) > shellThickness) continue;
-
-                    // "+" pattern: stone-brick arches along the X and Z axes
-                    // (where x==center or z==center), glass elsewhere. The top
-                    // cap is solid glass.
                     boolean onAxis = (x == CENTER_X || z == CENTER_Z);
-                    boolean isCap = (dy >= domeHeight - 1);
                     boolean isLamp = ((x - CENTER_X) % 4 == 0) && ((z - CENTER_Z) % 4 == 0)
                             && (x != CENTER_X || z != CENTER_Z) && !onAxis;
+
+                    // Near the peak, fill the disk solidly instead of just the
+                    // shell ring so the dome doesn't have an open hole below the
+                    // single top block.
+                    boolean fillSolid = sliceRadius <= shellThickness + 2.5;
+                    boolean inShell = Math.abs(dist - sliceRadius) <= shellThickness;
+
+                    if (!fillSolid && !inShell) continue;
 
                     if (isLamp) {
                         level.setBlock(new BlockPos(x, y, z),
                                 Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true), 2);
-                    } else if (onAxis && !isCap) {
+                    } else if (onAxis) {
                         level.setBlock(new BlockPos(x, y, z), Blocks.STONE_BRICKS.defaultBlockState(), 2);
                     } else {
                         level.setBlock(new BlockPos(x, y, z), Blocks.GLASS.defaultBlockState(), 2);

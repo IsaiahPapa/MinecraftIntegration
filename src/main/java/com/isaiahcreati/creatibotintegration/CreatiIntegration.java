@@ -13,6 +13,7 @@ import com.isaiahcreati.creatibotintegration.integration.minigame.DropperMinigam
 import com.isaiahcreati.creatibotintegration.integration.minigame.Minigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.MinigameEventHandler;
 import com.isaiahcreati.creatibotintegration.integration.minigame.ParkourMinigame;
+import com.isaiahcreati.creatibotintegration.integration.minigame.SumoMinigame;
 import com.isaiahcreati.creatibotintegration.integration.minigame.TntRunMinigame;
 import com.isaiahcreati.creatibotintegration.helpers.ToastIconHelper;
 import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
@@ -59,10 +60,12 @@ public class CreatiIntegration {
     private static final ParkourMinigame parkourMinigame = new ParkourMinigame();
     private static final TntRunMinigame tntRunMinigame = new TntRunMinigame();
     private static final DropperMinigame dropperMinigame = new DropperMinigame();
+    private static final SumoMinigame sumoMinigame = new SumoMinigame();
 
     public static ParkourMinigame getParkourMinigame() { return parkourMinigame; }
     public static TntRunMinigame getTntRunMinigame() { return tntRunMinigame; }
     public static DropperMinigame getDropperMinigame() { return dropperMinigame; }
+    public static SumoMinigame getSumoMinigame() { return sumoMinigame; }
 
 
     public CreatiIntegration(IEventBus modEventBus, ModContainer modContainer) {
@@ -73,6 +76,7 @@ public class CreatiIntegration {
         MinigameEventHandler.registerMinigame(parkourMinigame);
         MinigameEventHandler.registerMinigame(tntRunMinigame);
         MinigameEventHandler.registerMinigame(dropperMinigame);
+        MinigameEventHandler.registerMinigame(sumoMinigame);
         NeoForge.EVENT_BUS.register(new MinigameEventHandler());
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.CLIENT_CONFIG);
         modContainer.registerExtensionPoint(IConfigScreenFactory.class, (java.util.function.Supplier<IConfigScreenFactory>) () -> (container, screen) -> ModConfigScreen.create(screen));
@@ -195,9 +199,9 @@ public class CreatiIntegration {
                                 String tauntId = tauntDetails.tauntId;
                                 String tauntIcon = ToastIconHelper.getIconForTaunt(tauntId);
                                 if (Config.QUEUE_ENABLED.get()) {
-                                    QueueManager.enqueue(player, tauntId, payload.metadata.redeemerName);
+                                    QueueManager.enqueue(player, tauntId, payload.metadata.redeemerName, 15, tauntDetails.mobType);
                                 } else {
-                                    boolean dispatched = TauntDispatcher.dispatchTaunt(player, tauntId);
+                                    boolean dispatched = TauntDispatcher.dispatchTaunt(player, tauntId, 15, tauntDetails.mobType);
                                     if (taunt != null && dispatched) {
                                         Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 taunted you with &b" + taunt.getDisplayName());
                                         PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, payload.metadata.redeemerName, "", 0, tauntIcon));

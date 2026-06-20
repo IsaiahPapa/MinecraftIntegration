@@ -66,6 +66,7 @@ public class Taunts {
         taunts.put("parkour", new Taunt("parkour", "Parkour Course"));
         taunts.put("tntrun", new Taunt("tntrun", "TNT Run"));
         taunts.put("dropper", new Taunt("dropper", "Dropper"));
+        taunts.put("sumo", new Taunt("sumo", "Arena"));
         taunts.put("drop_all", new Taunt("drop_all", "Drop Everything!"));
         taunts.put("half_heart", new Taunt("half_heart", "Half-Hearted"));
         taunts.put("hungry", new Taunt("hungry", "Starving!"));
@@ -81,7 +82,9 @@ public class Taunts {
         taunts.put("bury", new Taunt("bury", "Buried Alive"));
         taunts.put("curse_gear", new Taunt("curse_gear", "Cursed!"));
         taunts.put("stack_one", new Taunt("stack_one", "Stack of One"));
-        taunts.put("mob_army", new Taunt("mob_army", "Mob Army"));
+        taunts.put("gremlin", new Taunt("gremlin", "Gremlin"));
+        taunts.put("big_mob", new Taunt("big_mob", "Big Mob"));
+        taunts.put("tiny_mob", new Taunt("tiny_mob", "Tiny Mob"));
         taunts.put("anvil_rain", new Taunt("anvil_rain", "Anvil Rain"));
         taunts.put("blind_noise", new Taunt("blind_noise", "Blind Panic"));
         taunts.put("rename_chat", new Taunt("rename_chat", "Rename the Streamer"));
@@ -443,21 +446,33 @@ public class Taunts {
     public static void randomizeMovementTemporarily(ServerPlayer player){
     }
 
-    public static void spawnMobArmy(ServerPlayer player) {
-        ServerLevel level = (ServerLevel) player.level();
-        String[] hostileTypes = {"minecraft:zombie", "minecraft:skeleton", "minecraft:spider",
-                "minecraft:creeper", "minecraft:witch", "minecraft:enderman"};
-        String chosen = hostileTypes[rand.nextInt(hostileTypes.length)];
-        EntityType<?> type = Utils.getEntityTypeByName(chosen);
-        if (type == null) return;
+    public static final String[] HOSTILE_TYPES = {
+            "minecraft:zombie", "minecraft:skeleton", "minecraft:spider",
+            "minecraft:creeper", "minecraft:witch", "minecraft:enderman"
+    };
 
-        int count = 8 + rand.nextInt(8);
+    public static java.util.List<Mob> spawnHostileRing(ServerLevel level, ServerPlayer player,
+                                                      double centerX, double centerY, double centerZ,
+                                                      int minCount, int maxCount) {
+        return spawnHostileRing(level, player, centerX, centerY, centerZ, minCount, maxCount, 3.5, 1.5);
+    }
+
+    public static java.util.List<Mob> spawnHostileRing(ServerLevel level, ServerPlayer player,
+                                                      double centerX, double centerY, double centerZ,
+                                                      int minCount, int maxCount,
+                                                      double baseRadius, double radiusVariance) {
+        java.util.List<Mob> spawned = new java.util.ArrayList<>();
+        String chosen = HOSTILE_TYPES[rand.nextInt(HOSTILE_TYPES.length)];
+        EntityType<?> type = Utils.getEntityTypeByName(chosen);
+        if (type == null) return spawned;
+
+        int count = minCount + rand.nextInt(Math.max(1, maxCount - minCount + 1));
         for (int i = 0; i < count; i++) {
             double angle = (Math.PI * 2 * i) / count;
-            double radius = 3.5 + rand.nextDouble() * 1.5;
-            double x = player.getX() + Math.cos(angle) * radius;
-            double z = player.getZ() + Math.sin(angle) * radius;
-            double y = player.getY();
+            double radius = baseRadius + rand.nextDouble() * radiusVariance;
+            double x = centerX + Math.cos(angle) * radius;
+            double z = centerZ + Math.sin(angle) * radius;
+            double y = centerY;
 
             Entity entity = type.create(level, EntitySpawnReason.EVENT);
             if (entity == null) continue;
@@ -467,10 +482,268 @@ public class Taunts {
                 if (mob instanceof net.minecraft.world.entity.monster.Monster monster) {
                     monster.setTarget(player);
                 }
+                spawned.add(mob);
             }
             level.addFreshEntity(entity);
         }
         level.playSound(null, player.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 0.6F, 0.8F);
+        return spawned;
+    }
+
+    public static void spawnScaledMob(ServerPlayer player, String mobType, float scale) {
+        ServerLevel level = (ServerLevel) player.level();
+        EntityType<?> type = null;
+
+        if (mobType != null && !mobType.isEmpty()) {
+            String id = mobType.contains(":") ? mobType : "minecraft:" + mobType;
+            type = Utils.getEntityTypeByName(id);
+        }
+        if (type == null) {
+            String chosen = HOSTILE_TYPES[rand.nextInt(HOSTILE_TYPES.length)];
+            type = Utils.getEntityTypeByName(chosen);
+        }
+        if (type == null) return;
+
+        double x = player.getX() + (rand.nextDouble() - 0.5) * 6;
+        double z = player.getZ() + (rand.nextDouble() - 0.5) * 6;
+        double y = player.getY();
+
+        Entity entity = type.create(level, EntitySpawnReason.EVENT);
+        if (entity == null) return;
+        entity.setPos(x, y, z);
+
+        if (entity instanceof Mob mob) {
+            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(entity.blockPosition()), EntitySpawnReason.EVENT, null);
+            mob.setPersistenceRequired();
+
+            net.minecraft.world.entity.ai.attributes.AttributeInstance scaleAttr =
+                    mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE);
+            if (scaleAttr != null) scaleAttr.setBaseValue(scale);
+
+            String prefix = scale > 1.0f ? "\u00A7bBig " : "\u00A7eTiny ";
+            String typeName = entity.getType().getDescription().getString();
+            mob.setCustomName(net.minecraft.network.chat.Component.literal(prefix + typeName)
+                    .setStyle(net.minecraft.network.chat.Style.EMPTY.withBold(true)));
+            mob.setCustomNameVisible(true);
+
+            if (scale > 1.0f) {
+                net.minecraft.world.entity.ai.attributes.AttributeInstance hp =
+                        mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                if (hp != null) {
+                    hp.setBaseValue(hp.getBaseValue() * 1.5);
+                    mob.setHealth(mob.getMaxHealth());
+                }
+                net.minecraft.world.entity.ai.attributes.AttributeInstance kr =
+                        mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
+                if (kr != null) kr.setBaseValue(1.0);
+                net.minecraft.world.entity.ai.attributes.AttributeInstance sh =
+                        mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.STEP_HEIGHT);
+                if (sh != null) sh.setBaseValue(2.0);
+                level.playSound(null, player.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 1.0F, 0.6F);
+            } else {
+                net.minecraft.world.entity.ai.attributes.AttributeInstance hp =
+                        mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                if (hp != null) {
+                    hp.setBaseValue(4.0);
+                    mob.setHealth(4.0f);
+                }
+                net.minecraft.world.entity.ai.attributes.AttributeInstance sp =
+                        mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+                if (sp != null) sp.setBaseValue(sp.getBaseValue() * 1.8);
+                level.playSound(null, player.blockPosition(), SoundEvents.BAT_AMBIENT, SoundSource.HOSTILE, 1.0F, 1.5F);
+            }
+
+            if (mob instanceof net.minecraft.world.entity.monster.Monster monster) {
+                monster.setTarget(player);
+            }
+        }
+        level.addFreshEntity(entity);
+    }
+
+    public static void spawnGremlin(ServerPlayer player) {
+        ServerLevel level = (ServerLevel) player.level();
+        EntityType<?> type = Utils.getEntityTypeByName("minecraft:zombie");
+        if (type == null) return;
+
+        double angle = rand.nextDouble() * Math.PI * 2;
+        double radius = 5.0 + rand.nextDouble() * 2.0;
+        double x = player.getX() + Math.cos(angle) * radius;
+        double z = player.getZ() + Math.sin(angle) * radius;
+        double y = player.getY();
+
+        Entity entity = type.create(level, EntitySpawnReason.EVENT);
+        if (entity == null) return;
+        entity.setPos(x, y, z);
+
+        if (entity instanceof net.minecraft.world.entity.monster.zombie.Zombie zombie) {
+            zombie.finalizeSpawn(level, level.getCurrentDifficultyAt(entity.blockPosition()), EntitySpawnReason.EVENT, null);
+            zombie.setBaby(true);
+            zombie.setPersistenceRequired();
+
+            ItemStack cap = new ItemStack(net.minecraft.world.item.Items.LEATHER_HELMET);
+            cap.set(net.minecraft.core.component.DataComponents.DYED_COLOR,
+                    new net.minecraft.world.item.component.DyedItemColor(0x33FF33));
+            cap.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                    net.minecraft.network.chat.Component.literal("Gremlin Cap")
+                            .withStyle(net.minecraft.ChatFormatting.GREEN));
+            zombie.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, cap);
+
+            net.minecraft.world.entity.ai.attributes.AttributeInstance speed =
+                    zombie.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+            if (speed != null) speed.setBaseValue(speed.getBaseValue() * 1.4);
+
+            net.minecraft.world.entity.ai.attributes.AttributeInstance maxHp =
+                    zombie.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+            if (maxHp != null) {
+                for (var mod : new java.util.ArrayList<>(maxHp.getModifiers())) {
+                    maxHp.removeModifier(mod);
+                }
+                maxHp.setBaseValue(1.0);
+                zombie.setHealth(1.0f);
+            }
+
+            zombie.setCustomName(net.minecraft.network.chat.Component.literal("Gremlin")
+                    .setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(
+                            net.minecraft.network.chat.TextColor.parseColor("#33FF33").getOrThrow()).withBold(true)));
+            zombie.setCustomNameVisible(true);
+
+            zombie.setTarget(player);
+
+            gremlins.put(zombie.getUUID(), new GremlinState(zombie, player.getUUID(),
+                    level.getServer().getTickCount() + (5 * 20), false));
+        }
+        level.addFreshEntity(entity);
+        level.playSound(null, player.blockPosition(), SoundEvents.VINDICATOR_CELEBRATE, SoundSource.HOSTILE, 1.0F, 1.4F);
+    }
+
+    public static boolean onPlayerHurtByGremlin(ServerPlayer player, net.minecraft.world.entity.Entity sourceEntity) {
+        if (!(sourceEntity instanceof net.minecraft.world.entity.Mob mob)) return false;
+        GremlinState state = gremlins.get(mob.getUUID());
+        if (state == null || state.itemStolen()) return false;
+        if (!state.ownerId().equals(player.getUUID())) return false;
+
+        stealItemForGremlin(player, mob);
+        gremlins.put(mob.getUUID(), new GremlinState(state.mob(), state.ownerId(),
+                state.fleeAfterTick(), true));
+
+        mob.setTarget(null);
+        com.isaiahcreati.creatibotintegration.helpers.Chat.SendAlert(player, "&cThe Gremlin stole an item! Hit it to get it back!");
+        return true;
+    }
+
+    private static void stealItemForGremlin(ServerPlayer player, net.minecraft.world.entity.Mob gremlin) {
+        Inventory inv = player.getInventory();
+        int stolenSlot = -1;
+        ItemStack stolen = ItemStack.EMPTY;
+
+        ItemStack mainHand = player.getMainHandItem();
+        if (!mainHand.isEmpty()) {
+            stolenSlot = player.getInventory().getSelectedSlot();
+            stolen = mainHand;
+        } else {
+            ItemStack offhand = player.getOffhandItem();
+            if (!offhand.isEmpty()) {
+                stolenSlot = Inventory.SLOT_OFFHAND;
+                stolen = offhand;
+            }
+        }
+
+        if (stolenSlot < 0) {
+            java.util.List<Integer> hotbar = new java.util.ArrayList<>();
+            for (int i = 0; i < 9; i++) {
+                if (!inv.getItem(i).isEmpty()) hotbar.add(i);
+            }
+            if (!hotbar.isEmpty()) {
+                stolenSlot = hotbar.get(rand.nextInt(hotbar.size()));
+                stolen = inv.getItem(stolenSlot);
+            }
+        }
+
+        if (stolenSlot < 0) {
+            java.util.List<Integer> all = new java.util.ArrayList<>();
+            for (int i = 0; i < inv.getContainerSize(); i++) {
+                if (!inv.getItem(i).isEmpty()) all.add(i);
+            }
+            if (!all.isEmpty()) {
+                stolenSlot = all.get(rand.nextInt(all.size()));
+                stolen = inv.getItem(stolenSlot);
+            }
+        }
+
+        if (stolenSlot < 0 || stolen.isEmpty()) return;
+
+        ItemStack taken = stolen.copy();
+        inv.removeItem(stolenSlot, stolen.getCount());
+        player.inventoryMenu.broadcastChanges();
+        gremlin.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, taken);
+    }
+
+    public record GremlinState(net.minecraft.world.entity.Mob mob, java.util.UUID ownerId, long fleeAfterTick, boolean itemStolen) {}
+    private static final Map<java.util.UUID, GremlinState> gremlins = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void onGremlinDeath(net.minecraft.world.entity.LivingEntity entity) {
+        if (!(entity instanceof net.minecraft.world.entity.Mob mob)) return;
+        GremlinState state = gremlins.get(mob.getUUID());
+        if (state == null) return;
+
+        ItemStack held = mob.getMainHandItem();
+        if (!held.isEmpty()) {
+            ServerLevel level = (ServerLevel) mob.level();
+            ItemEntity drop = new ItemEntity(level, mob.getX(), mob.getY() + 0.3, mob.getZ(), held.copy());
+            level.addFreshEntity(drop);
+            mob.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            ServerPlayer owner = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer() != null
+                    ? net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(state.ownerId())
+                    : null;
+            if (owner != null) {
+                com.isaiahcreati.creatibotintegration.helpers.Chat.SendAlert(owner, "&aYou got your item back!");
+            }
+        }
+        gremlins.remove(mob.getUUID());
+    }
+
+    public static void tickGremlins() {
+        if (gremlins.isEmpty()) return;
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        long currentTick = server.getTickCount();
+
+        var it = gremlins.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            GremlinState state = entry.getValue();
+            net.minecraft.world.entity.Mob mob = state.mob();
+            if (!mob.isAlive()) {
+                it.remove();
+                continue;
+            }
+
+            ServerPlayer owner = server.getPlayerList().getPlayer(state.ownerId());
+            if (owner == null || !owner.isAlive()) {
+                mob.setTarget(null);
+                continue;
+            }
+
+            if (mob.getTarget() == owner) {
+                if (currentTick >= state.fleeAfterTick()) {
+                    mob.setTarget(null);
+                }
+            }
+
+            if (mob.getTarget() == null && currentTick >= state.fleeAfterTick()) {
+                net.minecraft.world.phys.Vec3 mobPos = mob.position();
+                net.minecraft.world.phys.Vec3 away = mobPos.subtract(owner.position());
+                if (away.lengthSqr() > 1.0E-6) {
+                    away = away.normalize().scale(0.4);
+                    mob.setDeltaMovement(away.x, mob.getDeltaMovement().y, away.z);
+                    mob.hurtMarked = true;
+                }
+                double distSq = mobPos.distanceToSqr(owner.position());
+                if (distSq > 40 * 40) {
+                    it.remove();
+                }
+            }
+        }
     }
 
     public static void anvilRain(ServerPlayer player) {
