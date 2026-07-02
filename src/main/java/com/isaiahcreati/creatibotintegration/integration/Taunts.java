@@ -181,7 +181,6 @@ public class Taunts {
     }
 
     public static void webBlockPlayer(ServerPlayer player){
-        player.getOnPos();
         player.level().setBlock(player.getOnPos().above(), Blocks.COBWEB.defaultBlockState(), Block.UPDATE_ALL);
     }
 
@@ -441,9 +440,6 @@ public class Taunts {
         }
         player.inventoryMenu.broadcastChanges();
         player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_BREAK.value(), SoundSource.HOSTILE, 1.0F, 1.0F);
-    }
-
-    public static void randomizeMovementTemporarily(ServerPlayer player){
     }
 
     public static final String[] HOSTILE_TYPES = {

@@ -1,12 +1,12 @@
 # Creati's Bot Minecraft Integration
 
-A Minecraft Forge mod that integrates with Creati's Bot for Twitch stream interactions — taunts, minigames, effects, and more.
+A Minecraft NeoForge mod that integrates with Creati's Bot for Twitch stream interactions — taunts, minigames, effects, and more.
 
 ## Features
 
 - **Twitch Taunts**: Viewers trigger in-game actions like spawning TNT, shuffling inventory, launching players into the sky, and 30+ more
 - **Client-Side Effects**: FOV changes, camera roll, pumpkin overlay, DVD screensaver, shaders (blur, invert, B&W, LSD, CRT), inverted controls, mouse drifting
-- **Minigames**: Parkour course and TNT Run with config options
+- **Minigames**: Parkour, TNT Run, Dropper, and Arena (Sumo) with config options
 - **Mob Spawning & Effects**: `/creati test spawn <mob>` and `/creati test splash <effect>` for quick testing
 - **Config UI**: YACL-powered settings screen accessible via Mods → Config
 
@@ -29,6 +29,12 @@ A Minecraft Forge mod that integrates with Creati's Bot for Twitch stream intera
 | `/creati test splash <effectId> [duration] [amplifier]` | Apply a potion effect |
 | `/creati parkour start/leave` | Start/leave parkour minigame |
 | `/creati tntrun start/leave` | Start/leave TNT Run minigame |
+| `/creati dropper start/leave` | Start/leave dropper minigame |
+| `/creati sumo start/leave` | Start/leave arena (sumo) minigame |
+| `/creati safemode on/off` | Toggle safe mode (blocks redeems) |
+| `/creati setup` | Open onboarding setup |
+| `/creati book` | Give the config guide book |
+| `/creati debug queue/icon` | Debug queue or icon state |
 
 ## Development
 
@@ -41,13 +47,13 @@ A Minecraft Forge mod that integrates with Creati's Bot for Twitch stream intera
 
 ```bash
 # Build the mod
-JAVA_HOME=/path/to/jdk-17 ./gradlew build
+JAVA_HOME=/path/to/jdk-25 ./gradlew build
 
 # Run client for testing
-JAVA_HOME=/path/to/jdk-17 ./gradlew runClient
+JAVA_HOME=/path/to/jdk-25 ./gradlew runClient
 
 # Compile only (faster)
-JAVA_HOME=/path/to/jdk-17 ./gradlew compileJava
+JAVA_HOME=/path/to/jdk-25 ./gradlew compileJava
 ```
 
 ### Release Workflow

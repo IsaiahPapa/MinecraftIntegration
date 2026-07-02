@@ -7,6 +7,7 @@ import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.MobModifier;
 import com.isaiahcreati.creatibotintegration.integration.Taunt;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
+import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
 import com.isaiahcreati.creatibotintegration.network.PacketHandler;
 import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
@@ -84,13 +85,8 @@ public class ModCommands {
                                 Chat.SendMessage(player, "You must configure the Mod's settings before connecting.");
                                 return 0;
                             }
-                            String ALERT_KEY = Config.ALERT_KEY.get();
                             Chat.SendMessage(player, "Starting game session...");
                             socket.connect();
-                            socket.on(Socket.EVENT_CONNECT, args -> {
-                                socket.emit("join", ALERT_KEY);
-                                LOGGER.info("Connected to SocketIO");
-                            });
                             return 1;
                         })
                 )
@@ -195,6 +191,10 @@ public class ModCommands {
                                     player.sendSystemMessage(Component.literal("\u00a7bMinigame queue: \u00a7f" + QueueManager.getMinigameQueueSize()));
                                     player.sendSystemMessage(Component.literal("\u00a7bEffect queue: \u00a7f" + QueueManager.getVisualEffectQueueSize()));
                                     player.sendSystemMessage(Component.literal("\u00a7bPending taunts: \u00a7f" + QueueManager.getPendingTauntsSize()));
+                                    int pendingBuffs = Buffs.getPendingBuffsSize();
+                                    if (pendingBuffs > 0) {
+                                        player.sendSystemMessage(Component.literal("\u00a7dPending buffs: \u00a7f" + pendingBuffs));
+                                    }
                                     return 1;
                                 })
                         )
@@ -461,6 +461,34 @@ public class ModCommands {
                                         )
                                 )
                         )
+                        // /creati test buff <buffId> [duration]
+                        .then(Commands.literal("buff")
+                                .then(Commands.argument("buffId", StringArgumentType.word())
+                                        .suggests((context, builder) -> {
+                                            builder.suggest("glass_cannon");
+                                            builder.suggest("frostbite");
+                                            builder.suggest("double_health");
+                                            builder.suggest("explosive_spawns");
+                                            builder.suggest("fire_mobs");
+                                            builder.suggest("invisible_mobs");
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            String buffId = StringArgumentType.getString(context, "buffId");
+                                            int duration = 15;
+                                            try {
+                                                String[] parts = buffId.split(" ");
+                                                if (parts.length > 1) {
+                                                    duration = Integer.parseInt(parts[1]);
+                                                    buffId = parts[0];
+                                                }
+                                            } catch (NumberFormatException ignored) {}
+                                            Buffs.handleBuffActivation(player, buffId, duration, "Test");
+                                            return 1;
+                                        })
+                                )
+                        )
                         // /creati test notify <type> [name] [redeemer] [position]
                         .then(Commands.literal("notify")
                                 .then(Commands.argument("type", StringArgumentType.word())
@@ -557,6 +585,7 @@ public class ModCommands {
         player.sendSystemMessage(Component.literal("\u00a77/creati test spawn \u00a7f<mobId> [amount]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test potion \u00a7f<effectId> [duration] [amplifier]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test minigame \u00a7f<parkour|tntrun|dropper|sumo> <start|leave|forceexit>"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test buff \u00a7f<buffId> [duration]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test notify \u00a7f<type> [name] [redeemer] [position]"));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
     }

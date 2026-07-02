@@ -1,10 +1,13 @@
 package com.isaiahcreati.creatibotintegration.integration.minigame;
 
 import com.isaiahcreati.creatibotintegration.Config;
+import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.GameType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -50,6 +53,7 @@ public class MinigameEventHandler {
         Taunts.tickHotPotatoes();
         Taunts.tickLuckyBlocks();
         Taunts.tickGremlins();
+        Buffs.tick(event);
         if (Config.QUEUE_ENABLED.get()) {
             QueueManager.tick(event);
         }
@@ -87,6 +91,9 @@ public class MinigameEventHandler {
 
         if (sourceEntity != null) {
             Taunts.onPlayerHurtByGremlin(player, sourceEntity);
+            if (Buffs.isFrostbiteMob(sourceEntity)) {
+                player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 1));
+            }
         }
     }
 

@@ -27,7 +27,6 @@ This is a full rewrite on top of the 1.0.0.2 Forge 1.20 line. The mod now target
 - Export scripts for both CurseForge (`.zip`) and Modrinth (`.mrpack`).
 
 ### New Taunts (server-side)
-- **mob_army**: spawns 8–15 aggro hostile mobs in a ring around the streamer (enderman included, now actually targets the streamer).
 - **anvil_rain**: six staggered anvil drops over 80 ticks.
 - **blind_noise**: blindness + scattered creeper-prime sound jumpscares.
 - **rename_chat**: temporarily overrides the streamer's chat name for 60 seconds.

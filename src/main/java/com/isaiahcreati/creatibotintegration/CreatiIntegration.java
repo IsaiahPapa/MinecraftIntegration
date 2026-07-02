@@ -3,6 +3,7 @@ package com.isaiahcreati.creatibotintegration;
 import com.google.gson.*;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
+import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.helpers.Mobs;
 import com.isaiahcreati.creatibotintegration.helpers.OnboardingBook;
 import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
@@ -112,7 +113,7 @@ public class CreatiIntegration {
             socket.on(Socket.EVENT_CONNECT, args -> {
                 reconnectAttempts = 0;
                 LOGGER.info("Connected to SocketIO");
-                if (alertKey != null && !alertKey.isEmpty()) {
+                if (EventHandler.isConfigSetup()) {
                     socket.emit("join", alertKey);
                 }
             });
@@ -207,6 +208,11 @@ public class CreatiIntegration {
                                         PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, payload.metadata.redeemerName, "", 0, tauntIcon));
                                     }
                                 }
+                                break;
+                            case BUFF:
+                                if (!(payload.details instanceof BuffDetails buffDetails)) break;
+                                Buffs.handleBuffActivation(player, buffDetails.buffId, buffDetails.duration, payload.metadata.redeemerName);
+                                break;
                         }
                     }
 

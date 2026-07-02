@@ -42,7 +42,8 @@ public class QueueManager {
     private static final Set<String> VISUAL_EFFECT_IDS = Set.of(
             "blur", "inverted_colors", "black_and_white", "lsd", "crt",
             "pumpkin_view", "dvd", "drunk", "vignette_heartbeat",
-            "pixelate", "mirror", "fisheye"
+            "pixelate", "mirror", "fisheye",
+            "fov_quake", "fov_zoom", "upside_down", "rolling_camera", "camera_tilt"
     );
 
     private static final Set<String> MINIGAME_IDS = Set.of(
@@ -211,6 +212,7 @@ public class QueueManager {
             processNextMinigame(player);
         }
 
+        com.isaiahcreati.creatibotintegration.helpers.Buffs.releasePendingBuffs();
         broadcastQueueUpdate(player);
     }
 
@@ -259,6 +261,7 @@ public class QueueManager {
             staggerReleasing = false;
             resumeVisualEffects(player);
             processNextMinigame(player);
+            com.isaiahcreati.creatibotintegration.helpers.Buffs.releasePendingBuffs();
             broadcastQueueUpdate(player);
             return;
         }
