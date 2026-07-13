@@ -85,8 +85,8 @@ public class CreatiIntegration {
 
     private void commonSetup(final net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
         if (Config.needsReset()) {
-            LOGGER.info("Config version outdated, resetting to defaults...");
-            Config.resetToDefaults();
+            LOGGER.info("Config version outdated, migrating changed defaults...");
+            Config.migrateToCurrentVersion();
         }
     }
 

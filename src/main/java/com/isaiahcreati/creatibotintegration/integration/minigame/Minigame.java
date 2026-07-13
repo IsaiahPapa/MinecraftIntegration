@@ -16,6 +16,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.Iterator;
@@ -45,10 +46,12 @@ public abstract class Minigame {
     public abstract boolean checkLose(ServerPlayer player);
     public abstract void onTick(ServerPlayer player, long currentTick, long elapsedTicks);
     public abstract void onPlayerFall(ServerPlayer player);
+    protected abstract AABB getArenaBounds();
 
     public float getStartYaw() { return 0f; }
     public boolean hasGracePeriod() { return false; }
     public int getGracePeriodSeconds() { return 0; }
+    protected int getAdditionalDurationTicks(ServerPlayer player) { return 0; }
     protected void onGracePeriodCountdown(ServerPlayer player, int secondsRemaining) {}
 
     public boolean isInMinigame(ServerPlayer player) {
@@ -73,15 +76,22 @@ public abstract class Minigame {
             return;
         }
 
+        clearDroppedItems(minigameLevel);
+
         if (!arenaBuilt) {
             buildArena(minigameLevel);
             arenaBuilt = true;
+            clearDroppedItems(minigameLevel);
         }
 
         long currentTick = player.level().getServer().getTickCount();
         MinigamePlayerState state = new MinigamePlayerState(player, currentTick);
         activeSessions.put(player.getUUID(), state);
 
+        // Minigames use an isolated health pool. The overworld snapshot is
+        // restored when the player leaves.
+        player.setHealth(player.getMaxHealth());
+        player.setAbsorptionAmount(0.0F);
         player.stopRiding();
         player.setDeltaMovement(0, 0, 0);
         player.fallDistance = 0;
@@ -97,6 +107,7 @@ public abstract class Minigame {
 
         BlockPos startPos = getStartPos();
         player.teleportTo(minigameLevel, startPos.getX() + 0.5, startPos.getY(), startPos.getZ() + 0.5, Set.<Relative>of(), getStartYaw(), player.getXRot(), false);
+        clearDroppedItems(minigameLevel);
 
         minigameLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
 
@@ -124,6 +135,7 @@ public abstract class Minigame {
 
         player.removeEffect(MobEffects.RESISTANCE);
         player.removeEffect(MobEffects.SLOW_FALLING);
+        restoreHealth(player, state);
 
         if (!success) {
             float damage = getFailDamage();
@@ -135,8 +147,12 @@ public abstract class Minigame {
 
         onExit(player, success);
 
+        ServerLevel minigameLevel = MinigameDimension.getMinigameLevel(player);
+        if (minigameLevel != null) {
+            clearDroppedItems(minigameLevel);
+        }
+
         if (!arenaBuilt) {
-            ServerLevel minigameLevel = MinigameDimension.getMinigameLevel(player);
             if (minigameLevel != null) {
                 resetArena(minigameLevel);
                 arenaBuilt = false;
@@ -150,7 +166,7 @@ public abstract class Minigame {
 
     public void onServerTick(ServerTickEvent.Post event) {
         long currentTick = event.getServer().getTickCount();
-        int durationTicks = getDurationSeconds() * 20;
+        int baseDurationTicks = getDurationSeconds() * 20;
         int gracePeriodTicks = getGracePeriodSeconds() * 20;
 
         Iterator<Map.Entry<UUID, MinigamePlayerState>> it = activeSessions.entrySet().iterator();
@@ -181,6 +197,7 @@ public abstract class Minigame {
             long gameElapsedTicks = hasGracePeriod() ? elapsedTicks - gracePeriodTicks : elapsedTicks;
 
             if (hasTimer()) {
+                int durationTicks = baseDurationTicks + getAdditionalDurationTicks(player);
                 updateTimerBar(player, durationTicks, (int) gameElapsedTicks);
 
                 if (!isTimerSurvival() && gameElapsedTicks >= durationTicks) {
@@ -240,6 +257,11 @@ public abstract class Minigame {
         }
 
         player.setGameMode(state.getOriginalGameMode());
+        restoreHealth(player, state);
+
+        if (minigameLevel != null) {
+            clearDroppedItems(minigameLevel);
+        }
     }
 
     public void handlePlayerDisconnect(UUID uuid) {
@@ -266,6 +288,12 @@ public abstract class Minigame {
         player.setGameMode(state.getOriginalGameMode());
         player.removeEffect(MobEffects.RESISTANCE);
         player.removeEffect(MobEffects.SLOW_FALLING);
+        restoreHealth(player, state);
+
+        ServerLevel minigameLevel = MinigameDimension.getMinigameLevel(player);
+        if (minigameLevel != null) {
+            clearDroppedItems(minigameLevel);
+        }
 
         // Clean up the queue so future taunts aren't blocked.
         QueueManager.onMinigameEnd(player);
@@ -287,6 +315,17 @@ public abstract class Minigame {
 
     protected void removeTimerBar(ServerPlayer player) {
         player.sendSystemMessage(Component.literal(""), true);
+    }
+
+    private void restoreHealth(ServerPlayer player, MinigamePlayerState state) {
+        player.setHealth(Math.min(state.getOriginalHealth(), player.getMaxHealth()));
+        player.setAbsorptionAmount(state.getOriginalAbsorption());
+    }
+
+    private void clearDroppedItems(ServerLevel level) {
+        for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, getArenaBounds())) {
+            item.discard();
+        }
     }
 
     protected void markArenaNeedsRebuild() {

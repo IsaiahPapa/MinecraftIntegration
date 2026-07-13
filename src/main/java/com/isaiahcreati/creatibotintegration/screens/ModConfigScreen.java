@@ -8,6 +8,7 @@ import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.YetAnotherConfigLib;
 import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
+import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -44,6 +45,12 @@ public class ModConfigScreen {
                                 .description(OptionDescription.of(Component.literal("Allow viewers to send you to a parkour course")))
                                 .binding(Binding.generic(true, Config.PARKOUR_ENABLED::get, Config.PARKOUR_ENABLED::set))
                                 .controller(TickBoxControllerBuilder::create)
+                                .build())
+                        .option(Option.<Integer>createBuilder()
+                                .name(Component.literal("Parkour Arena Version"))
+                                .description(OptionDescription.of(Component.literal("1 = legacy, 2 = Foundry Sprint, 3 = Prism Relay")))
+                                .binding(Binding.generic(3, Config.PARKOUR_ARENA_VERSION::get, Config.PARKOUR_ARENA_VERSION::set))
+                                .controller(option -> IntegerSliderControllerBuilder.create(option).range(1, 3).step(1))
                                 .build())
                         .option(Option.<Boolean>createBuilder()
                                 .name(Component.literal("TNT Run"))

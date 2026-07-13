@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 
@@ -46,6 +47,12 @@ public class SumoArena {
 
     public int getWaterY() { return WATER_Y; }
 
+    public AABB getBounds() {
+        return new AABB(
+                CENTER_X - CLEAR_HALF, CLEAR_BOTTOM_Y - 1, CENTER_Z - CLEAR_HALF,
+                CENTER_X + CLEAR_HALF + 1, CLEAR_TOP_Y + 1, CENTER_Z + CLEAR_HALF + 1);
+    }
+
     private boolean isInCircle(int x, int z, int radius) {
         double dx = x - CENTER_X;
         double dz = z - CENTER_Z;
@@ -53,10 +60,7 @@ public class SumoArena {
     }
 
     private boolean isWallRing(int x, int z, int radius) {
-        double dx = x - CENTER_X;
-        double dz = z - CENTER_Z;
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        return dist >= radius - 0.5 && dist < radius + 0.5;
+        return ArenaDome.isWallRing(x, z, CENTER_X, CENTER_Z, radius);
     }
 
     private void clearFloatingText(ServerLevel level) {
@@ -80,6 +84,8 @@ public class SumoArena {
         int platformRadius = getRadius();
         int wallRadius = getWallRadius();
         int waterRadius = wallRadius + 2;
+        BlockState litLamp = Blocks.REDSTONE_LAMP.defaultBlockState()
+                .setValue(BlockStateProperties.LIT, true);
 
         // 1. Clear a large bounding box covering stale geometry.
         for (int x = CENTER_X - CLEAR_HALF; x <= CENTER_X + CLEAR_HALF; x++) {
@@ -112,7 +118,14 @@ public class SumoArena {
             for (int z = CENTER_Z - wallRadius - 1; z <= CENTER_Z + wallRadius + 1; z++) {
                 if (!isWallRing(x, z, wallRadius)) continue;
                 for (int y = WATER_Y; y <= wallTopY; y++) {
-                    level.setBlock(new BlockPos(x, y, z), Blocks.STONE_BRICKS.defaultBlockState(), 2);
+                    int dx = x - CENTER_X;
+                    int dz = z - CENTER_Z;
+                    boolean onLightAnchor = dx == 0 || dz == 0 || Math.abs(dx) == Math.abs(dz);
+                    boolean onLightRow = y == FLOOR_Y + 2 || y == FLOOR_Y + 6;
+                    BlockState wallState = onLightAnchor && onLightRow
+                            ? litLamp
+                            : Blocks.STONE_BRICKS.defaultBlockState();
+                    level.setBlock(new BlockPos(x, y, z), wallState, 2);
                 }
             }
         }
@@ -122,14 +135,33 @@ public class SumoArena {
         for (int x = CENTER_X - platformRadius; x <= CENTER_X + platformRadius; x++) {
             for (int z = CENTER_Z - platformRadius; z <= CENTER_Z + platformRadius; z++) {
                 if (!isInCircle(x, z, platformRadius)) continue;
-                level.setBlock(new BlockPos(x, FLOOR_Y, z), Blocks.SMOOTH_STONE.defaultBlockState(), 2);
+                double dx = x - CENTER_X;
+                double dz = z - CENTER_Z;
+                double distance = Math.sqrt(dx * dx + dz * dz);
+                int floorLightRadius = Math.max(2, platformRadius / 2);
+                boolean isFloorLight = (Math.abs(dx) == floorLightRadius && dz == 0)
+                        || (Math.abs(dz) == floorLightRadius && dx == 0);
+                if (isFloorLight) {
+                    level.setBlock(new BlockPos(x, FLOOR_Y, z), litLamp, 2);
+                    continue;
+                }
+                Block platformBlock;
+                if (distance >= platformRadius - 1.0) {
+                    platformBlock = Blocks.POLISHED_ANDESITE;
+                } else if (x == CENTER_X && z == CENTER_Z) {
+                    platformBlock = Blocks.CHISELED_STONE_BRICKS;
+                } else {
+                    platformBlock = Blocks.SMOOTH_STONE;
+                }
+                level.setBlock(new BlockPos(x, FLOOR_Y, z), platformBlock.defaultBlockState(), 2);
             }
         }
 
         // 5. Hollow stone-brick dome roof so the arena is fully enclosed and
         //    sunlight can't get in (undead won't burn). Dome sits on top of the
         //    outer walls.
-        buildDomeRoof(level, wallTopY + 1, wallRadius);
+        ArenaDome.build(level, CENTER_X, CENTER_Z, wallTopY + 1, wallRadius,
+                Blocks.SMOOTH_STONE.defaultBlockState(), Blocks.STONE_BRICKS.defaultBlockState());
 
         // 6. Floating labels.
         spawnFloatingText(level, new BlockPos(CENTER_X, FLOOR_Y + 6, CENTER_Z),
@@ -138,48 +170,6 @@ public class SumoArena {
                 Component.literal("\u00A77Knock them off!").withStyle(s -> s.withBold(false)));
 
         CreatiIntegration.LOGGER.info("Arena built!");
-    }
-
-    private void buildDomeRoof(ServerLevel level, int domeBaseY, int domeRadius) {
-        int domeHeight = domeRadius;
-        double shellThickness = 1.2;
-
-        for (int dy = 0; dy <= domeHeight; dy++) {
-            double t = (double) dy / domeHeight;
-            double sliceRadius = domeRadius * Math.sqrt(Math.max(0, 1 - t * t));
-            int r = (int) Math.ceil(sliceRadius);
-
-            int y = domeBaseY + dy;
-            for (int x = CENTER_X - r; x <= CENTER_X + r; x++) {
-                for (int z = CENTER_Z - r; z <= CENTER_Z + r; z++) {
-                    double dx = x - CENTER_X;
-                    double dz = z - CENTER_Z;
-                    double dist = Math.sqrt(dx * dx + dz * dz);
-
-                    boolean onAxis = (x == CENTER_X || z == CENTER_Z);
-                    boolean isLamp = ((x - CENTER_X) % 4 == 0) && ((z - CENTER_Z) % 4 == 0)
-                            && (x != CENTER_X || z != CENTER_Z) && !onAxis;
-
-                    // Near the peak, sliceRadius is small and the ring placement
-                    // leaves the center hollow. Fill the whole disk solidly when
-                    // the slice is tight enough that the shell ring wouldn't
-                    // cover the center.
-                    boolean fillSolid = sliceRadius <= shellThickness + 2.5;
-                    boolean inShell = Math.abs(dist - sliceRadius) <= shellThickness;
-
-                    if (!fillSolid && !inShell) continue;
-
-                    if (isLamp) {
-                        level.setBlock(new BlockPos(x, y, z),
-                                Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true), 2);
-                    } else if (onAxis) {
-                        level.setBlock(new BlockPos(x, y, z), Blocks.STONE_BRICKS.defaultBlockState(), 2);
-                    } else {
-                        level.setBlock(new BlockPos(x, y, z), Blocks.SMOOTH_STONE.defaultBlockState(), 2);
-                    }
-                }
-            }
-        }
     }
 
     public void rebuildArena(ServerLevel level) {

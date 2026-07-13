@@ -7,7 +7,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
@@ -40,7 +39,7 @@ public class TntRunArena {
     // doesn't decay" issues caused by a stale minigame dimension.
     private static final int CLEAR_HALF = 20;
     private static final int CLEAR_BOTTOM_Y = 49;
-    private static final int CLEAR_TOP_Y = 86; // covers the dome roof
+    private static final int CLEAR_TOP_Y = 92; // covers the largest configurable dome roof
 
     public static final int[] FLOOR_Y_LEVELS = FLOOR_Y_LEVELS_ALL;
 
@@ -74,10 +73,7 @@ public class TntRunArena {
     }
 
     public boolean isWallRing(int x, int z) {
-        double dx = x - CENTER_X;
-        double dz = z - CENTER_Z;
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        return dist >= getHalf() - 0.5 && dist < getHalf() + 0.5;
+        return ArenaDome.isWallRing(x, z, CENTER_X, CENTER_Z, getHalf());
     }
 
     public BlockPos getStartPosition() {
@@ -86,6 +82,12 @@ public class TntRunArena {
 
     public int getCenterX() { return CENTER_X; }
     public int getCenterZ() { return CENTER_Z; }
+
+    public AABB getBounds() {
+        return new AABB(
+                CENTER_X - CLEAR_HALF, CLEAR_BOTTOM_Y - 1, CENTER_Z - CLEAR_HALF,
+                CENTER_X + CLEAR_HALF + 1, CLEAR_TOP_Y + 1, CENTER_Z + CLEAR_HALF + 1);
+    }
 
     private void clearFloatingText(ServerLevel level) {
         for (ArmorStand stand : floatingTextStands) {
@@ -166,7 +168,8 @@ public class TntRunArena {
             // axes ("+" from above) and lit redstone lamps embedded for a
             // warm glow.
             if (f == 0) {
-                buildDomeRoof(level, wallTopY + 1, half);
+                ArenaDome.build(level, CENTER_X, CENTER_Z, wallTopY + 1, half,
+                        Blocks.GLASS.defaultBlockState(), Blocks.STONE_BRICKS.defaultBlockState());
             }
         }
 
@@ -177,59 +180,6 @@ public class TntRunArena {
                 Component.literal("\u00A77Keep moving!").withStyle(style -> style.withBold(false)));
 
         CreatiIntegration.LOGGER.info("TNT Run arena built!");
-    }
-
-    /**
-     * Builds a hollow dome roof above the top floor. The dome base (dy=0) is a
-     * full disk that sits flush on top of the circular walls, fully closing
-     * the arena. For dy>0 only the shell is placed so the player has headroom
-     * inside an enclosed space. The shell is primarily glass with stone-brick
-     * arches along the X and Z axes ("+" pattern from above), lit redstone
-     * lamps embedded at intervals, and a solid glass cap at the top.
-     *
-     * @param level       the server level
-     * @param domeBaseY   the Y where the dome starts (top of walls + 1)
-     * @param domeRadius  the radius of the dome (matches the wall outer radius)
-     */
-    private void buildDomeRoof(ServerLevel level, int domeBaseY, int domeRadius) {
-        int domeHeight = domeRadius; // half-sphere
-        double shellThickness = 1.2;
-
-        for (int dy = 0; dy <= domeHeight; dy++) {
-            double t = (double) dy / domeHeight;
-            double sliceRadius = domeRadius * Math.sqrt(Math.max(0, 1 - t * t));
-            int r = (int) Math.ceil(sliceRadius);
-
-            int y = domeBaseY + dy;
-            for (int x = CENTER_X - r; x <= CENTER_X + r; x++) {
-                for (int z = CENTER_Z - r; z <= CENTER_Z + r; z++) {
-                    double dx = x - CENTER_X;
-                    double dz = z - CENTER_Z;
-                    double dist = Math.sqrt(dx * dx + dz * dz);
-
-                    boolean onAxis = (x == CENTER_X || z == CENTER_Z);
-                    boolean isLamp = ((x - CENTER_X) % 4 == 0) && ((z - CENTER_Z) % 4 == 0)
-                            && (x != CENTER_X || z != CENTER_Z) && !onAxis;
-
-                    // Near the peak, fill the disk solidly instead of just the
-                    // shell ring so the dome doesn't have an open hole below the
-                    // single top block.
-                    boolean fillSolid = sliceRadius <= shellThickness + 2.5;
-                    boolean inShell = Math.abs(dist - sliceRadius) <= shellThickness;
-
-                    if (!fillSolid && !inShell) continue;
-
-                    if (isLamp) {
-                        level.setBlock(new BlockPos(x, y, z),
-                                Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true), 2);
-                    } else if (onAxis) {
-                        level.setBlock(new BlockPos(x, y, z), Blocks.STONE_BRICKS.defaultBlockState(), 2);
-                    } else {
-                        level.setBlock(new BlockPos(x, y, z), Blocks.GLASS.defaultBlockState(), 2);
-                    }
-                }
-            }
-        }
     }
 
     public void rebuildArena(ServerLevel level) {

@@ -329,7 +329,8 @@ public class ModCommands {
                                         })
                                 )
                         )
-                        // /creati test minigame <parkour|tntrun|dropper> <start|leave|forceexit>
+                        // /creati test minigame <parkour|tntrun|dropper|sumo> <start|leave|forceexit>
+                        // /creati test minigame parkour version <1|2|3>
                         .then(Commands.literal("minigame")
                                 .then(Commands.literal("parkour")
                                         .then(Commands.literal("start")
@@ -364,6 +365,19 @@ public class ModCommands {
                                                     CreatiIntegration.getParkourMinigame().handlePlayerReconnect(player);
                                                     return 1;
                                                 })
+                                        )
+                                        .then(Commands.literal("version")
+                                                .then(Commands.argument("version", IntegerArgumentType.integer(1, 3))
+                                                        .executes(context -> {
+                                                            int version = IntegerArgumentType.getInteger(context, "version");
+                                                            Config.PARKOUR_ARENA_VERSION.set(version);
+                                                            Config.CLIENT_CONFIG.save();
+                                                            context.getSource().sendSuccess(() -> Component.literal(
+                                                                    "Parkour arena set to version " + version
+                                                                            + ". It will rebuild on the next entry."), false);
+                                                            return 1;
+                                                        })
+                                                )
                                         )
                                 )
                                 .then(Commands.literal("tntrun")
@@ -585,6 +599,7 @@ public class ModCommands {
         player.sendSystemMessage(Component.literal("\u00a77/creati test spawn \u00a7f<mobId> [amount]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test potion \u00a7f<effectId> [duration] [amplifier]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test minigame \u00a7f<parkour|tntrun|dropper|sumo> <start|leave|forceexit>"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test minigame parkour version \u00a7f<1|2|3>"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test buff \u00a7f<buffId> [duration]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test notify \u00a7f<type> [name] [redeemer] [position]"));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
