@@ -1,5 +1,6 @@
 package com.isaiahcreati.creatibotintegration.helpers;
 
+import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
 import com.isaiahcreati.creatibotintegration.network.PacketHandler;
@@ -27,15 +28,18 @@ public class Buffs {
 
     private static final Map<UUID, List<ActiveBuff>> activeBuffs = new ConcurrentHashMap<>();
 
-    public record PendingBuff(ServerPlayer player, String buffId, int durationSeconds, String redeemerName) {}
+    public record PendingBuff(UUID playerUuid, String buffId, int durationSeconds, String redeemerName) {}
     private static final LinkedList<PendingBuff> pendingBuffs = new LinkedList<>();
 
     private static final String FROSTBITE_TAG = "creatibotintegration.frostbite";
 
     public static void handleBuffActivation(ServerPlayer player, String buffId, int duration, String redeemerName) {
-        if (QueueManager.isMinigameActive()) {
-            pendingBuffs.add(new PendingBuff(player, buffId, duration, redeemerName));
+        if (Config.QUEUE_ENABLED.get() && QueueManager.isMinigameActive()) {
+            pendingBuffs.add(new PendingBuff(player.getUUID(), buffId, duration, redeemerName));
             Chat.SendAlert(player, "&b" + redeemerName + "&7 activated &b" + getDisplayName(buffId) + "&7 — queued (minigame active)");
+            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(
+                    "BUFF_QUEUED", buffId, redeemerName, "", pendingBuffs.size(), "item:minecraft:beacon"));
+            QueueManager.broadcastQueueUpdate();
             return;
         }
         activate(player, buffId, duration, redeemerName);
@@ -47,7 +51,7 @@ public class Buffs {
 
         String name = getDisplayName(buffId);
         Chat.SendAlert(player, "&b" + redeemerName + "&7 activated &b" + name + "&7 for &b" + duration + "s");
-        PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("BUFF", buffId, redeemerName, name + " (" + duration + "s)", 0, "item:minecraft:beacon"));
+        PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("BUFF_ACTIVATED", buffId, redeemerName, name + " (" + duration + "s)", 0, "item:minecraft:beacon"));
         player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 1.0F, 1.0F);
         LOGGER.info("Activated buff {} for {} ({}s)", buffId, player.getName().getString(), duration);
     }
@@ -63,11 +67,12 @@ public class Buffs {
         while (it.hasNext()) {
             PendingBuff pending = it.next();
             it.remove();
-            ServerPlayer player = server.getPlayerList().getPlayer(pending.player().getUUID());
+            ServerPlayer player = server.getPlayerList().getPlayer(pending.playerUuid());
             if (player != null) {
                 activate(player, pending.buffId(), pending.durationSeconds(), pending.redeemerName());
             }
         }
+        QueueManager.broadcastQueueUpdate();
     }
 
     public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
@@ -180,5 +185,18 @@ public class Buffs {
 
     public static int getPendingBuffsSize() {
         return pendingBuffs.size();
+    }
+
+    public static List<PendingBuff> getPendingBuffsSnapshot() {
+        return List.copyOf(pendingBuffs);
+    }
+
+    public static void clearPendingBuffs() {
+        pendingBuffs.clear();
+    }
+
+    public static void resetState() {
+        pendingBuffs.clear();
+        activeBuffs.clear();
     }
 }

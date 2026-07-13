@@ -1,6 +1,5 @@
 package com.isaiahcreati.creatibotintegration.integration.minigame;
 
-import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
@@ -54,9 +53,7 @@ public class MinigameEventHandler {
         Taunts.tickLuckyBlocks();
         Taunts.tickGremlins();
         Buffs.tick(event);
-        if (Config.QUEUE_ENABLED.get()) {
-            QueueManager.tick(event);
-        }
+        QueueManager.tick(event);
     }
 
     @SubscribeEvent
@@ -126,6 +123,10 @@ public class MinigameEventHandler {
     @SubscribeEvent
     public void onPlayerConnect(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        // Always send a complete snapshot, including the empty state, so a
+        // client can never carry sidebar data over from another world.
+        QueueManager.sendQueueUpdate(player);
 
         UUID uuid = player.getUUID();
         boolean wasInMinigame = false;

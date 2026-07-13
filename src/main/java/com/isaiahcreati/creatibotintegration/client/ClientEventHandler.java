@@ -6,6 +6,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 
 @EventBusSubscriber(modid = CreatiIntegration.MODID, value = Dist.CLIENT)
@@ -22,6 +23,18 @@ public class ClientEventHandler {
     public static void onClientTick(ClientTickEvent.Post event) {
         ClientEffectManager.tick();
         ActivityFeedState.tick();
+    }
+
+    @SubscribeEvent
+    public static void onClientLogin(ClientPlayerNetworkEvent.LoggingIn event) {
+        ClientQueueState.reset();
+        ActivityFeedState.clear();
+    }
+
+    @SubscribeEvent
+    public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientQueueState.reset();
+        ActivityFeedState.clear();
     }
 
     @SubscribeEvent

@@ -41,7 +41,7 @@ A Minecraft NeoForge mod that integrates with Creati's Bot for Twitch stream int
 ### Prerequisites
 
 - JDK 25 (Temurin recommended)
-- Gradle 8.x
+- Gradle 9.x
 
 ### Build & Run
 
@@ -92,6 +92,15 @@ In-game: **Mods → Creati's Bot Integration → Config**
 | Alert Key | Your bot key from the Creati's Bot dashboard |
 | Chat Alerts | Show chat messages when taunts are triggered |
 | Parkour Arena Version | Choose legacy V1, Foundry Sprint V2, or 30-second Prism Relay V3 |
+| Queue System | Queue conflicting minigames, visual effects, taunts, and buffs locally |
+| Queue Sidebar | Show active items and up to four queued entries, with a remaining count |
+| Activity Feed | Show up to five recent trigger notifications for five seconds |
+
+The queue is global and in-memory for the single-streamer use case. The local
+Minecraft logical server owns scheduling and sends complete snapshots to the
+client HUD; the remote bot backend does not store or restore queue state.
+
+Queue staging steps are documented in [docs/QUEUE_STAGING.md](docs/QUEUE_STAGING.md).
 
 Advanced settings (parkour duration, TNT Run decay, etc.) are in the config file:
 `creatibotintegration-common.toml`

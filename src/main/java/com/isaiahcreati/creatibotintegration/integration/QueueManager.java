@@ -3,6 +3,8 @@ package com.isaiahcreati.creatibotintegration.integration;
 import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 
+import com.isaiahcreati.creatibotintegration.helpers.Buffs;
+import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
 import com.isaiahcreati.creatibotintegration.helpers.TauntDispatcher;
 import com.isaiahcreati.creatibotintegration.helpers.ToastIconHelper;
 import com.isaiahcreati.creatibotintegration.integration.minigame.Minigame;
@@ -10,6 +12,7 @@ import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotifica
 import com.isaiahcreati.creatibotintegration.network.ClientboundQueueUpdatePacket;
 import com.isaiahcreati.creatibotintegration.network.ClientboundTauntEffectPacket;
 import com.isaiahcreati.creatibotintegration.network.PacketHandler;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.LinkedList;
@@ -38,6 +41,8 @@ public class QueueManager {
 
     private static int staggerDelayTicks = 0;
     private static boolean staggerReleasing = false;
+    private static boolean queueWasEnabled = false;
+    private static int lastSafeModeRemainingSeconds = 0;
 
     private static final Set<String> VISUAL_EFFECT_IDS = Set.of(
             "blur", "inverted_colors", "black_and_white", "lsd", "crt",
@@ -62,6 +67,67 @@ public class QueueManager {
         return minigameActive;
     }
 
+    public static void resetForServerStart() {
+        clearQueueState(true);
+        queueWasEnabled = false;
+        broadcastCooldown = 0;
+        lastSafeModeRemainingSeconds = 0;
+    }
+
+    public static void resetForServerStop() {
+        clearQueueState(true);
+        broadcastQueueUpdate();
+        queueWasEnabled = false;
+    }
+
+    private static void clearQueueState(boolean clearActiveBuffs) {
+        minigameQueue.clear();
+        visualEffectQueue.clear();
+        pendingTaunts.clear();
+
+        minigameActive = false;
+        activeMinigameId = null;
+        activeMinigameRedeemer = null;
+
+        activeVisualEffectId = null;
+        activeVisualEffectRedeemer = null;
+        activeVisualEffectExpiryTick = 0;
+        activeVisualEffectDurationSeconds = 0;
+
+        visualEffectsPaused = false;
+        pausedVisualEffectId = null;
+        pausedVisualEffectRedeemer = null;
+        pausedVisualEffectRemainingTicks = 0;
+
+        staggerDelayTicks = 0;
+        staggerReleasing = false;
+
+        if (clearActiveBuffs) {
+            Buffs.resetState();
+        } else {
+            Buffs.clearPendingBuffs();
+        }
+    }
+
+    private static void clearWaitingQueues() {
+        minigameQueue.clear();
+        visualEffectQueue.clear();
+        pendingTaunts.clear();
+        Buffs.clearPendingBuffs();
+        staggerDelayTicks = 0;
+        staggerReleasing = false;
+    }
+
+    private static boolean hasQueueState() {
+        return minigameActive
+                || activeVisualEffectId != null
+                || visualEffectsPaused
+                || !minigameQueue.isEmpty()
+                || !visualEffectQueue.isEmpty()
+                || !pendingTaunts.isEmpty()
+                || Buffs.getPendingBuffsSize() > 0;
+    }
+
     public static void enqueue(ServerPlayer player, String tauntId, String redeemerName) {
         enqueue(player, tauntId, redeemerName, 15, null);
     }
@@ -72,8 +138,9 @@ public class QueueManager {
 
     public static void enqueue(ServerPlayer player, String tauntId, String redeemerName, int durationSeconds, String mobType) {
         if (!Config.QUEUE_ENABLED.get()) {
-            TauntDispatcher.dispatchTaunt(player, tauntId, durationSeconds, mobType);
-            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
+            if (TauntDispatcher.dispatchTaunt(player, tauntId, durationSeconds, mobType)) {
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
+            }
             return;
         }
 
@@ -89,6 +156,9 @@ public class QueueManager {
                     minigameActive = false;
                     activeMinigameId = null;
                     activeMinigameRedeemer = null;
+                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(
+                            "MINIGAME_SKIPPED", tauntId, redeemerName, "Unavailable", 0,
+                            ToastIconHelper.getIconForTaunt(tauntId)));
                 } else {
                     pauseVisualEffects(player);
                     PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_ACTIVATED", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
@@ -120,12 +190,13 @@ public class QueueManager {
                 pendingTaunts.add(entry);
                 PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_QUEUED", tauntId, redeemerName, "", pendingTaunts.size(), ToastIconHelper.getIconForTaunt(tauntId)));
             } else {
-                TauntDispatcher.dispatchTaunt(player, tauntId, durationSeconds, mobType);
-                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
+                if (TauntDispatcher.dispatchTaunt(player, tauntId, durationSeconds, mobType)) {
+                    PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, redeemerName, "", 0, ToastIconHelper.getIconForTaunt(tauntId)));
+                }
             }
         }
 
-        broadcastQueueUpdate(player);
+        broadcastQueueUpdate();
     }
 
     private static void activateVisualEffect(ServerPlayer player, String effectId, String redeemerName, int durationSeconds) {
@@ -141,6 +212,7 @@ public class QueueManager {
         activeVisualEffectExpiryTick += (additionalSeconds * 20L);
         long currentTick = player.level().getServer().getTickCount();
         int remainingSeconds = (int) Math.max(0, (activeVisualEffectExpiryTick - currentTick) / 20);
+        activeVisualEffectDurationSeconds = remainingSeconds;
         PacketHandler.sendToPlayer(player, new ClientboundTauntEffectPacket(activeVisualEffectId, remainingSeconds));
     }
 
@@ -198,22 +270,28 @@ public class QueueManager {
     }
 
     public static void onMinigameEnd(ServerPlayer player) {
-        if (!Config.QUEUE_ENABLED.get()) return;
-
         minigameActive = false;
         activeMinigameId = null;
         activeMinigameRedeemer = null;
+
+        if (!Config.QUEUE_ENABLED.get()) {
+            resumeVisualEffects(player);
+            broadcastQueueUpdate();
+            return;
+        }
+
+        Buffs.releasePendingBuffs();
 
         if (!pendingTaunts.isEmpty()) {
             staggerReleasing = true;
             staggerDelayTicks = Config.STAGGER_DELAY_TICKS.get();
         } else {
-            resumeVisualEffects(player);
-            processNextMinigame(player);
+            if (!processNextMinigame(player)) {
+                resumeVisualEffects(player);
+            }
         }
 
-        com.isaiahcreati.creatibotintegration.helpers.Buffs.releasePendingBuffs();
-        broadcastQueueUpdate(player);
+        broadcastQueueUpdate();
     }
 
     private static int broadcastCooldown = 0;
@@ -221,14 +299,25 @@ public class QueueManager {
 
     public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
         long currentTick = event.getServer().getTickCount();
+        boolean queueEnabled = Config.QUEUE_ENABLED.get();
+
+        if (queueEnabled && !queueWasEnabled) {
+            queueWasEnabled = true;
+            broadcastQueueUpdate();
+        } else if (!queueEnabled && queueWasEnabled) {
+            clearWaitingQueues();
+            queueWasEnabled = false;
+            broadcastQueueUpdate();
+        }
 
         if (activeVisualEffectId != null && !visualEffectsPaused) {
             if (currentTick >= activeVisualEffectExpiryTick) {
                 activeVisualEffectId = null;
                 activeVisualEffectRedeemer = null;
                 activeVisualEffectExpiryTick = 0;
+                activeVisualEffectDurationSeconds = 0;
 
-                ServerPlayer player = event.getServer().getPlayerList().getPlayers().isEmpty() ? null : event.getServer().getPlayerList().getPlayers().get(0);
+                ServerPlayer player = getPrimaryPlayer(event.getServer());
                 if (player != null) {
                     processNextVisualEffect(player);
                 }
@@ -236,10 +325,10 @@ public class QueueManager {
             }
         }
 
-        if (staggerReleasing) {
+        if (queueEnabled && staggerReleasing) {
             staggerDelayTicks--;
             if (staggerDelayTicks <= 0) {
-                ServerPlayer player = event.getServer().getPlayerList().getPlayers().isEmpty() ? null : event.getServer().getPlayerList().getPlayers().get(0);
+                ServerPlayer player = getPrimaryPlayer(event.getServer());
                 if (player != null) {
                     releaseNextPendingTaunt(player);
                 }
@@ -249,29 +338,38 @@ public class QueueManager {
         broadcastCooldown--;
         if (broadcastCooldown <= 0) {
             broadcastCooldown = BROADCAST_INTERVAL_TICKS;
-            if (activeVisualEffectId != null || !minigameQueue.isEmpty() || !visualEffectQueue.isEmpty()
-                    || minigameActive || !pendingTaunts.isEmpty() || visualEffectsPaused) {
+            int safeModeRemaining = SafeMode.isActive() ? SafeMode.getRemainingSeconds() : 0;
+            if (hasQueueState() || safeModeRemaining > 0 || lastSafeModeRemainingSeconds > 0) {
                 broadcastQueueUpdate();
             }
+            lastSafeModeRemainingSeconds = safeModeRemaining;
         }
+    }
+
+    private static ServerPlayer getPrimaryPlayer(MinecraftServer server) {
+        return server.getPlayerList().getPlayers().isEmpty()
+                ? null
+                : server.getPlayerList().getPlayers().getFirst();
     }
 
     private static void releaseNextPendingTaunt(ServerPlayer player) {
         if (pendingTaunts.isEmpty()) {
             staggerReleasing = false;
-            resumeVisualEffects(player);
-            processNextMinigame(player);
-            com.isaiahcreati.creatibotintegration.helpers.Buffs.releasePendingBuffs();
-            broadcastQueueUpdate(player);
+            Buffs.releasePendingBuffs();
+            if (!processNextMinigame(player)) {
+                resumeVisualEffects(player);
+            }
+            broadcastQueueUpdate();
             return;
         }
 
         QueuedTaunt taunt = pendingTaunts.pollFirst();
-        TauntDispatcher.dispatchTaunt(player, taunt.getTauntId(), taunt.getDurationSeconds(), taunt.getMobType());
-        PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_ACTIVATED", taunt.getTauntId(), taunt.getRedeemerName(), "", 0, ToastIconHelper.getIconForTaunt(taunt.getTauntId())));
+        if (TauntDispatcher.dispatchTaunt(player, taunt.getTauntId(), taunt.getDurationSeconds(), taunt.getMobType())) {
+            PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_ACTIVATED", taunt.getTauntId(), taunt.getRedeemerName(), "", 0, ToastIconHelper.getIconForTaunt(taunt.getTauntId())));
+        }
 
         staggerDelayTicks = Config.STAGGER_DELAY_TICKS.get();
-        broadcastQueueUpdate(player);
+        broadcastQueueUpdate();
     }
 
     private static void processNextVisualEffect(ServerPlayer player) {
@@ -282,8 +380,8 @@ public class QueueManager {
         }
     }
 
-    private static void processNextMinigame(ServerPlayer player) {
-        if (!minigameActive && !minigameQueue.isEmpty()) {
+    private static boolean processNextMinigame(ServerPlayer player) {
+        while (!minigameActive && !minigameQueue.isEmpty()) {
             QueuedTaunt next = minigameQueue.pollFirst();
             minigameActive = true;
             activeMinigameId = next.getTauntId();
@@ -293,11 +391,16 @@ public class QueueManager {
                 minigameActive = false;
                 activeMinigameId = null;
                 activeMinigameRedeemer = null;
+                PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket(
+                        "MINIGAME_SKIPPED", next.getTauntId(), next.getRedeemerName(), "Unavailable", 0,
+                        ToastIconHelper.getIconForTaunt(next.getTauntId())));
             } else {
                 pauseVisualEffects(player);
                 PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("MINIGAME_ACTIVATED", next.getTauntId(), next.getRedeemerName(), "", 0, ToastIconHelper.getIconForTaunt(next.getTauntId())));
+                return true;
             }
         }
+        return minigameActive;
     }
 
     private static boolean dispatchMinigame(ServerPlayer player, String tauntId, String redeemerName) {
@@ -312,11 +415,18 @@ public class QueueManager {
         if (!game.isEnabled()) return false;
         if (game.isInMinigame(player)) return false;
         game.enterPlayer(player, redeemerName);
-        return true;
+        return game.isInMinigame(player);
     }
 
     public static void broadcastQueueUpdate() {
-        if (!Config.QUEUE_ENABLED.get()) return;
+        PacketHandler.sendToAll(createQueueUpdatePacket());
+    }
+
+    public static void sendQueueUpdate(ServerPlayer player) {
+        PacketHandler.sendToPlayer(player, createQueueUpdatePacket());
+    }
+
+    public static ClientboundQueueUpdatePacket createQueueUpdatePacket() {
 
         int veRemaining = 0;
         if (activeVisualEffectId != null && !visualEffectsPaused) {
@@ -325,32 +435,38 @@ public class QueueManager {
             veRemaining = (int) Math.max(0, (activeVisualEffectExpiryTick - currentTick) / 20);
         }
 
-        ClientboundQueueUpdatePacket packet = new ClientboundQueueUpdatePacket(
+        return new ClientboundQueueUpdatePacket(
                 buildQueueEntries(minigameQueue),
                 buildQueueEntries(visualEffectQueue),
+                buildQueueEntries(pendingTaunts),
+                buildPendingBuffEntries(),
                 activeMinigameId != null ? activeMinigameId : "",
                 activeMinigameRedeemer != null ? activeMinigameRedeemer : "",
                 activeVisualEffectId != null ? activeVisualEffectId : "",
                 activeVisualEffectRedeemer != null ? activeVisualEffectRedeemer : "",
+                pausedVisualEffectId != null ? pausedVisualEffectId : "",
+                pausedVisualEffectRedeemer != null ? pausedVisualEffectRedeemer : "",
                 veRemaining,
                 activeVisualEffectDurationSeconds,
                 (int)(pausedVisualEffectRemainingTicks / 20),
-                pendingTaunts.size(),
-                com.isaiahcreati.creatibotintegration.helpers.SafeMode.isActive()
-                        ? com.isaiahcreati.creatibotintegration.helpers.SafeMode.getRemainingSeconds() : 0
+                SafeMode.isActive() ? SafeMode.getRemainingSeconds() : 0
         );
-
-        PacketHandler.sendToAll(packet);
-    }
-
-    public static void broadcastQueueUpdate(ServerPlayer player) {
-        broadcastQueueUpdate();
     }
 
     private static List<ClientboundQueueUpdatePacket.QueueEntry> buildQueueEntries(LinkedList<QueuedTaunt> queue) {
         List<ClientboundQueueUpdatePacket.QueueEntry> entries = new java.util.ArrayList<>();
         for (QueuedTaunt t : queue) {
-            entries.add(new ClientboundQueueUpdatePacket.QueueEntry(t.getTauntId(), t.getRedeemerName(), t.getDurationSeconds()));
+            entries.add(new ClientboundQueueUpdatePacket.QueueEntry(
+                    t.getTauntId(), getTauntDisplayName(t.getTauntId()), t.getRedeemerName(), t.getDurationSeconds()));
+        }
+        return entries;
+    }
+
+    private static List<ClientboundQueueUpdatePacket.QueueEntry> buildPendingBuffEntries() {
+        List<ClientboundQueueUpdatePacket.QueueEntry> entries = new java.util.ArrayList<>();
+        for (Buffs.PendingBuff buff : Buffs.getPendingBuffsSnapshot()) {
+            entries.add(new ClientboundQueueUpdatePacket.QueueEntry(
+                    buff.buffId(), Buffs.getDisplayName(buff.buffId()), buff.redeemerName(), buff.durationSeconds()));
         }
         return entries;
     }

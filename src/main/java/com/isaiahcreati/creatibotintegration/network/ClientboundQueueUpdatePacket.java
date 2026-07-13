@@ -14,14 +14,17 @@ import java.util.List;
 public record ClientboundQueueUpdatePacket(
         List<QueueEntry> minigameQueue,
         List<QueueEntry> visualEffectQueue,
+        List<QueueEntry> pendingTaunts,
+        List<QueueEntry> pendingBuffs,
         String activeMinigameId,
         String activeMinigameRedeemer,
         String activeVisualEffectId,
         String activeVisualEffectRedeemer,
+        String pausedVisualEffectId,
+        String pausedVisualEffectRedeemer,
         int activeVisualEffectRemainingSeconds,
         int activeVisualEffectDurationSeconds,
         int pausedEffectRemainingSeconds,
-        int pendingTauntsCount,
         int safeModeRemainingSeconds
 ) implements CustomPacketPayload {
 
@@ -35,11 +38,14 @@ public record ClientboundQueueUpdatePacket(
         this(
                 readQueueEntries(buf),
                 readQueueEntries(buf),
+                readQueueEntries(buf),
+                readQueueEntries(buf),
                 buf.readUtf(),
                 buf.readUtf(),
                 buf.readUtf(),
                 buf.readUtf(),
-                buf.readVarInt(),
+                buf.readUtf(),
+                buf.readUtf(),
                 buf.readVarInt(),
                 buf.readVarInt(),
                 buf.readVarInt(),
@@ -50,14 +56,17 @@ public record ClientboundQueueUpdatePacket(
     public static void encode(RegistryFriendlyByteBuf buf, ClientboundQueueUpdatePacket packet) {
         writeQueueEntries(buf, packet.minigameQueue());
         writeQueueEntries(buf, packet.visualEffectQueue());
+        writeQueueEntries(buf, packet.pendingTaunts());
+        writeQueueEntries(buf, packet.pendingBuffs());
         buf.writeUtf(packet.activeMinigameId() != null ? packet.activeMinigameId() : "");
         buf.writeUtf(packet.activeMinigameRedeemer() != null ? packet.activeMinigameRedeemer() : "");
         buf.writeUtf(packet.activeVisualEffectId() != null ? packet.activeVisualEffectId() : "");
         buf.writeUtf(packet.activeVisualEffectRedeemer() != null ? packet.activeVisualEffectRedeemer() : "");
+        buf.writeUtf(packet.pausedVisualEffectId() != null ? packet.pausedVisualEffectId() : "");
+        buf.writeUtf(packet.pausedVisualEffectRedeemer() != null ? packet.pausedVisualEffectRedeemer() : "");
         buf.writeVarInt(packet.activeVisualEffectRemainingSeconds());
         buf.writeVarInt(packet.activeVisualEffectDurationSeconds());
         buf.writeVarInt(packet.pausedEffectRemainingSeconds());
-        buf.writeVarInt(packet.pendingTauntsCount());
         buf.writeVarInt(packet.safeModeRemainingSeconds());
     }
 
@@ -65,7 +74,7 @@ public record ClientboundQueueUpdatePacket(
         int size = buf.readVarInt();
         List<QueueEntry> entries = new ArrayList<>();
         for (int i = 0; i < size; i++) {
-            entries.add(new QueueEntry(buf.readUtf(), buf.readUtf(), buf.readVarInt()));
+            entries.add(new QueueEntry(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readVarInt()));
         }
         return entries;
     }
@@ -74,6 +83,7 @@ public record ClientboundQueueUpdatePacket(
         buf.writeVarInt(entries.size());
         for (QueueEntry entry : entries) {
             buf.writeUtf(entry.tauntId());
+            buf.writeUtf(entry.displayName());
             buf.writeUtf(entry.redeemerName());
             buf.writeVarInt(entry.durationSeconds());
         }
@@ -90,5 +100,5 @@ public record ClientboundQueueUpdatePacket(
         return TYPE;
     }
 
-    public record QueueEntry(String tauntId, String redeemerName, int durationSeconds) {}
+    public record QueueEntry(String tauntId, String displayName, String redeemerName, int durationSeconds) {}
 }

@@ -109,6 +109,7 @@ public class ModCommands {
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     SafeMode.enable(context.getSource().getServer(), 30);
+                                    QueueManager.broadcastQueueUpdate();
                                     Chat.SendMessage(player, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77enabled for \u00a7d30s\u00a77. Redeems are paused.");
                                     return 1;
                                 })
@@ -117,6 +118,7 @@ public class ModCommands {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
                                             int seconds = IntegerArgumentType.getInteger(context, "seconds");
                                             SafeMode.enable(context.getSource().getServer(), seconds);
+                                            QueueManager.broadcastQueueUpdate();
                                             Chat.SendMessage(player, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77enabled for \u00a7d" + seconds + "s\u00a77. Redeems are paused.");
                                             return 1;
                                         })
@@ -130,6 +132,7 @@ public class ModCommands {
                                         return 0;
                                     }
                                     SafeMode.disable();
+                                    QueueManager.broadcastQueueUpdate();
                                     Chat.SendMessage(player, "\u00a7a\u00a7l\u2714 Safe Mode \u00a7r\u00a77disabled. Redeems are live again.");
                                     return 1;
                                 })
@@ -490,17 +493,18 @@ public class ModCommands {
                                         .executes(context -> {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
                                             String buffId = StringArgumentType.getString(context, "buffId");
-                                            int duration = 15;
-                                            try {
-                                                String[] parts = buffId.split(" ");
-                                                if (parts.length > 1) {
-                                                    duration = Integer.parseInt(parts[1]);
-                                                    buffId = parts[0];
-                                                }
-                                            } catch (NumberFormatException ignored) {}
-                                            Buffs.handleBuffActivation(player, buffId, duration, "Test");
+                                            Buffs.handleBuffActivation(player, buffId, 15, "Test");
                                             return 1;
                                         })
+                                        .then(Commands.argument("duration", IntegerArgumentType.integer(1, 3600))
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    String buffId = StringArgumentType.getString(context, "buffId");
+                                                    int duration = IntegerArgumentType.getInteger(context, "duration");
+                                                    Buffs.handleBuffActivation(player, buffId, duration, "Test");
+                                                    return 1;
+                                                })
+                                        )
                                 )
                         )
                         // /creati test notify <type> [name] [redeemer] [position]

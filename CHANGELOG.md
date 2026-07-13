@@ -2,6 +2,22 @@
 
 All notable changes to Creati's Bot Integration are documented here.
 
+## Unreleased
+
+### Queue and HUD
+
+- Queue snapshots now include minigames, visual effects, deferred taunts, and
+  deferred buffs, including display names and redeemers.
+- Added login/logout, world lifecycle, empty-state, Queue System toggle, and
+  Safe Mode synchronization so the client HUD cannot retain stale state.
+- Rebuilt the compact queue sidebar with active items, four typed upcoming
+  entries, a `+N more` summary, and correctly sized visual-effect progress.
+- Kept the activity feed capped at five notifications for five seconds while
+  adding queued and activated buff events.
+- Socket.IO interactions now enter the logical server thread before mutating
+  queue or Minecraft state.
+- Added JVM tests for queue-to-sidebar projection and a staging checklist.
+
 ## [2.0.2] — 2026-06-18
 
 ### Build & Release

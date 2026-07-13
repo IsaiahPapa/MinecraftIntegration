@@ -62,9 +62,12 @@ public class ActivityFeedRenderer {
             case "TAUNT", "TAUNT_INSTANT" -> 0xFF5555;
             case "TAUNT_QUEUED", "MINIGAME_QUEUED" -> 0xFFAA00;
             case "TAUNT_ACTIVATED", "MINIGAME_ACTIVATED" -> 0x55FF55;
+            case "MINIGAME_SKIPPED" -> 0xFF5555;
             case "TAUNT_EXTENDED" -> 0xFFFF55;
             case "VISUAL_EFFECT_QUEUED" -> 0xFFAA00;
             case "VISUAL_EFFECT_ACTIVATED" -> 0x55FFFF;
+            case "BUFF_QUEUED" -> 0xFFAA00;
+            case "BUFF", "BUFF_ACTIVATED" -> 0x55FF55;
             default -> 0xFFFFFF;
         };
     }
@@ -80,8 +83,11 @@ public class ActivityFeedRenderer {
             case "TAUNT_EXTENDED" -> "\u00a7eExtended";
             case "MINIGAME_QUEUED" -> "\u00a76Queued";
             case "MINIGAME_ACTIVATED" -> "\u00a7aActive";
+            case "MINIGAME_SKIPPED" -> "\u00a7cUnavailable";
             case "VISUAL_EFFECT_QUEUED" -> "\u00a76Queued";
             case "VISUAL_EFFECT_ACTIVATED" -> "\u00a7bActive";
+            case "BUFF_QUEUED" -> "\u00a76Queued Buff";
+            case "BUFF", "BUFF_ACTIVATED" -> "\u00a7aActive Buff";
             default -> "";
         };
     }

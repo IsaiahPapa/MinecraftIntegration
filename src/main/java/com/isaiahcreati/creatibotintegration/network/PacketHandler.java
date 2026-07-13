@@ -9,8 +9,8 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 public class PacketHandler {
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1")
-                .versioned("1.0")
+        PayloadRegistrar registrar = event.registrar("2")
+                .versioned("2.0")
                 .optional();
 
         registrar.playToClient(

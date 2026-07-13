@@ -98,6 +98,7 @@ public class CreatiIntegration {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
+        QueueManager.resetForServerStart();
         SafeMode.setServer(event.getServer());
         try {
             String url;
@@ -145,7 +146,11 @@ public class CreatiIntegration {
             });
 
             socket.on("interaction:minecraft", args -> {
-                try {
+                // Socket.IO callbacks run off-thread. Queue and world state are
+                // owned by the logical server, so process the complete redeem
+                // on the server thread to keep enqueue/dequeue operations safe.
+                event.getServer().execute(() -> {
+                    try {
                     LOGGER.info("Got interaction: " + args.toString());
 
                     if (SafeMode.isActive()) {
@@ -216,10 +221,10 @@ public class CreatiIntegration {
                         }
                     }
 
-                } catch (JsonSyntaxException e) {
-                    LOGGER.error("Failed process interaction: " + e);
-                    e.printStackTrace();
-                }
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to process interaction", e);
+                    }
+                });
             });
 
             if (Config.AUTO_CONNECT.get() && EventHandler.isConfigSetup()) {
@@ -235,6 +240,7 @@ public class CreatiIntegration {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Server stopping...");
+        QueueManager.resetForServerStop();
         if (socket != null) {
             LOGGER.info("Disconnecting from SocketIO Server...");
             socket.disconnect();
