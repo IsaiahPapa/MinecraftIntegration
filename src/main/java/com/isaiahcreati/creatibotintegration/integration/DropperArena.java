@@ -102,12 +102,17 @@ public class DropperArena {
                 CENTER_X + clearRadius + 1, clearTopY + 1, CENTER_Z + clearRadius + 1);
     }
 
+    /**
+     * The pool's footprint, extended a couple of blocks up. A player whose
+     * hitbox is over any part of the water when they come down has landed it,
+     * even if their feet catch the rim beside it.
+     */
     public AABB getWaterTargetBounds() {
         BlockPos center = getWaterCenter();
         int size = getWaterSize();
         return new AABB(
                 center.getX(), WATER_Y, center.getZ(),
-                center.getX() + size, WATER_Y + 1, center.getZ() + size);
+                center.getX() + size, WATER_Y + 2, center.getZ() + size);
     }
 
     private Block getGradientBlock(int y) {
@@ -154,9 +159,9 @@ public class DropperArena {
     }
 
     private int getTerrainRise(int x, int z) {
-        // The pool sits in a one-block-high glowing frame so it reads as the
-        // target from the top of the shaft, 85 blocks up.
-        if (isWaterBorder(x, z)) return 1;
+        // The pool is framed by glowstone flush with the water, so it reads as
+        // the target from 85 blocks up without a lip for players to land on.
+        if (isWaterBorder(x, z)) return 0;
         int dx = x - CENTER_X;
         int dz = z - CENTER_Z;
         int noise = Math.floorMod(dx * 37 + dz * 57 + dx * dz * 11, 29);

@@ -84,7 +84,9 @@ public class DropperMinigame extends Minigame {
 
     @Override
     public boolean checkWin(ServerPlayer player) {
-        return player.getBoundingBox().intersects(arena.getWaterTargetBounds());
+        // Any part of the hitbox over the pool on the way down counts; the
+        // old strict check failed players whose edge clipped the rim.
+        return player.isInWater() || player.getBoundingBox().intersects(arena.getWaterTargetBounds());
     }
 
     @Override

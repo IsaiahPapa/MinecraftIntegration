@@ -11,7 +11,6 @@ import net.minecraft.network.chat.TextColor;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -19,16 +18,15 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Relative;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,16 +40,10 @@ public abstract class Minigame {
     /** Key in the player's persistent data holding their pre-minigame state. */
     private static final String RETURN_STATE_KEY = "creatibotintegration:minigame_return";
 
-    private static final AttributeModifier COUNTDOWN_FREEZE_SPEED = new AttributeModifier(
-            Identifier.fromNamespaceAndPath("creatibotintegration", "minigame_countdown_speed"),
-            -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-    private static final AttributeModifier COUNTDOWN_FREEZE_JUMP = new AttributeModifier(
-            Identifier.fromNamespaceAndPath("creatibotintegration", "minigame_countdown_jump"),
-            -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-
     protected final Map<UUID, MinigamePlayerState> activeSessions = new ConcurrentHashMap<>();
     protected final Map<UUID, MinigamePlayerState> disconnectedSessions = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> lastCountdownShown = new ConcurrentHashMap<>();
+    private final Map<UUID, List<BlockPos>> countdownCages = new ConcurrentHashMap<>();
     protected boolean arenaBuilt = false;
 
     public abstract String getId();
@@ -79,7 +71,7 @@ public abstract class Minigame {
      */
     public int getGracePeriodSeconds() { return 0; }
 
-    /** Whether the player is held in place during the countdown. */
+    /** Whether the player is held on the start block during the countdown. */
     protected boolean freezeDuringGracePeriod() { return true; }
 
     /** Players below this Y are treated as having fallen out of the arena. */
@@ -164,7 +156,7 @@ public abstract class Minigame {
 
         if (getGracePeriodSeconds() > 0) {
             if (freezeDuringGracePeriod()) {
-                setFrozen(player, true);
+                placeCountdownCage(player, minigameLevel, startPos);
             }
         } else {
             sendTitle(player, getTitle(), getSubtitle());
@@ -302,6 +294,7 @@ public abstract class Minigame {
 
     private void endSession(ServerPlayer player) {
         lastCountdownShown.remove(player.getUUID());
+        removeCountdownCage(player);
         onSessionEnd(player);
 
         ServerLevel minigameLevel = MinigameDimension.getMinigameLevel(player);
@@ -314,7 +307,7 @@ public abstract class Minigame {
 
     private void startGame(ServerPlayer player) {
         lastCountdownShown.remove(player.getUUID());
-        setFrozen(player, false);
+        removeCountdownCage(player);
         sendTitle(player,
                 Component.literal("GO!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#55FF55").getOrThrow()).withBold(true)),
                 getSubtitle());
@@ -350,15 +343,32 @@ public abstract class Minigame {
         player.sendSystemMessage(Component.literal(""), true);
     }
 
-    private static void setFrozen(ServerPlayer player, boolean frozen) {
-        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
-        AttributeInstance jump = player.getAttribute(Attributes.JUMP_STRENGTH);
-        if (frozen) {
-            if (speed != null) speed.addOrUpdateTransientModifier(COUNTDOWN_FREEZE_SPEED);
-            if (jump != null) jump.addOrUpdateTransientModifier(COUNTDOWN_FREEZE_JUMP);
-        } else {
-            if (speed != null) speed.removeModifier(COUNTDOWN_FREEZE_SPEED.id());
-            if (jump != null) jump.removeModifier(COUNTDOWN_FREEZE_JUMP.id());
+    /**
+     * Holds the player on the start block during the countdown with invisible
+     * barriers on all four sides. (Zeroing movement speed instead also makes
+     * the client zoom the camera, because FOV follows movement speed.)
+     */
+    private void placeCountdownCage(ServerPlayer player, ServerLevel level, BlockPos feet) {
+        List<BlockPos> placed = new ArrayList<>();
+        for (BlockPos side : new BlockPos[]{feet.north(), feet.south(), feet.east(), feet.west()}) {
+            for (BlockPos pos : new BlockPos[]{side, side.above()}) {
+                if (level.getBlockState(pos).isAir()) {
+                    level.setBlock(pos, Blocks.BARRIER.defaultBlockState(), 2);
+                    placed.add(pos.immutable());
+                }
+            }
+        }
+        countdownCages.put(player.getUUID(), placed);
+    }
+
+    private void removeCountdownCage(ServerPlayer player) {
+        List<BlockPos> placed = countdownCages.remove(player.getUUID());
+        ServerLevel level = MinigameDimension.getMinigameLevel(player);
+        if (placed == null || level == null) return;
+        for (BlockPos pos : placed) {
+            if (level.getBlockState(pos).is(Blocks.BARRIER)) {
+                level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
+            }
         }
     }
 
@@ -370,7 +380,6 @@ public abstract class Minigame {
     /** Puts everything from the snapshot back and forgets the persisted copy. */
     private static void restorePlayer(ServerPlayer player, MinigamePlayerState state, boolean teleport) {
         removeTimerBar(player);
-        setFrozen(player, false);
         player.stopRiding();
 
         if (teleport) {
@@ -429,7 +438,6 @@ public abstract class Minigame {
     /** Last-resort exit for a player stranded in the minigame dimension with no saved state. */
     public static void rescueStrandedPlayer(ServerPlayer player) {
         removeTimerBar(player);
-        setFrozen(player, false);
         teleportToWorldSpawn(player);
         player.setGameMode(GameType.SURVIVAL);
         player.removeEffect(MobEffects.RESISTANCE);
