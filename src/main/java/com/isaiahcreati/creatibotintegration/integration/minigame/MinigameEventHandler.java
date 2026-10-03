@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
@@ -97,8 +98,16 @@ public class MinigameEventHandler {
 
         // Arena item entities are wiped between sessions, so a dropped item
         // would be lost for good. Put it straight back into the inventory.
-        event.setCanceled(true);
-        player.getInventory().placeItemBackInInventory(event.getEntity().getItem().copy());
+        // Only take what fits: overflowing would drop the item again, firing
+        // this event recursively. Any remainder (a cursor stack dropped with a
+        // full inventory) is left on the ground at the player's feet.
+        ItemStack remainder = event.getEntity().getItem().copy();
+        player.getInventory().add(remainder);
+        if (remainder.isEmpty()) {
+            event.setCanceled(true);
+        } else {
+            event.getEntity().setItem(remainder);
+        }
     }
 
     @SubscribeEvent
