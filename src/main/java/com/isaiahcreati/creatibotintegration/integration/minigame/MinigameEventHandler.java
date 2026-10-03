@@ -3,6 +3,7 @@ package com.isaiahcreati.creatibotintegration.integration.minigame;
 import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaLabels;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -10,6 +11,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -118,6 +120,16 @@ public class MinigameEventHandler {
         // Ender pearls, wind charges, rockets, tridents, and potions all let a
         // player skip or escape the arena, so held items stay inert here.
         event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public void onEntityJoin(EntityJoinLevelEvent event) {
+        // Arena labels are respawned with their arena; drop saved copies.
+        if (event.loadedFromDisk()
+                && MinigameDimension.isMinigameDimension(event.getLevel())
+                && ArenaLabels.isStale(event.getEntity())) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent

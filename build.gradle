@@ -83,6 +83,10 @@ neoForge {
             sourceSet sourceSets.main
         }
     }
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
 }
 
 // Add modpack jars to the modpack-specific run additional runtime classpath
@@ -169,4 +173,9 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // ./gradlew test -Darena.previews=true renders every minigame arena to
+    // PNG images in build/arena-previews for checking layouts without the game.
+    systemProperty 'arena.previews', System.getProperty('arena.previews', 'false')
+    systemProperty 'arena.previewDir', layout.buildDirectory.dir('arena-previews').get().asFile.absolutePath
+    systemProperty 'java.awt.headless', 'true'
 }

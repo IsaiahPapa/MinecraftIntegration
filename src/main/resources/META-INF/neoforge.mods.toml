@@ -30,5 +30,8 @@ type="required"
 ordering="NONE"
 side="CLIENT"
 
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"
+
 [[mixins]]
 config="creatibotintegration.mixins.json"
