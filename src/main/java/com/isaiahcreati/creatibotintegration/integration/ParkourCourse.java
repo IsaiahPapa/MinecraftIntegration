@@ -99,12 +99,6 @@ public class ParkourCourse {
         CreatiIntegration.LOGGER.info("Parkour course version {} built!", version);
     }
 
-    public void forceRebuild(ServerLevel parkourLevel) {
-        courseBuilt = false;
-        builtVersion = 0;
-        buildIfNeeded(parkourLevel);
-    }
-
     private void generateCourse(ServerLevel level, int version) {
         clearFloatingText(level);
 

@@ -8,8 +8,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -23,7 +21,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TntRunMinigame extends Minigame {
@@ -34,7 +31,6 @@ public class TntRunMinigame extends Minigame {
     private final TntRunArena arena = new TntRunArena();
     private final Map<BlockPos, DecayEntry> blocksToRemove = new ConcurrentHashMap<>();
     private final Set<BlockPos> activatedBlocks = new HashSet<>();
-    private final Map<UUID, Integer> lastCountdownShown = new ConcurrentHashMap<>();
     private final Random random = new Random();
 
     private static final int[][] CROSS_OFFSETS = {{0, 0}};
@@ -92,37 +88,10 @@ public class TntRunMinigame extends Minigame {
     public boolean isTimerSurvival() { return true; }
 
     @Override
-    public boolean hasGracePeriod() { return true; }
-
-    @Override
     public int getGracePeriodSeconds() { return Config.TNT_RUN_GRACE_PERIOD_SECONDS.get(); }
 
     @Override
-    protected void onGracePeriodCountdown(ServerPlayer player, int secondsRemaining) {
-        Integer lastShown = lastCountdownShown.get(player.getUUID());
-        if (lastShown != null && lastShown == secondsRemaining) return;
-
-        lastCountdownShown.put(player.getUUID(), secondsRemaining);
-
-        String text;
-        String colorHex;
-        if (secondsRemaining > 0) {
-            text = String.valueOf(secondsRemaining);
-            colorHex = secondsRemaining == 3 ? "#FF5555" : secondsRemaining == 2 ? "#FFAA00" : "#55FF55";
-        } else {
-            text = "GO!";
-            colorHex = "#55FF55";
-        }
-
-        player.connection.send(new ClientboundSetTitlesAnimationPacket(5, 15, 5));
-        player.connection.send(new ClientboundSetTitleTextPacket(
-                Component.literal(text).setStyle(Style.EMPTY.withColor(TextColor.parseColor(colorHex).getOrThrow()).withBold(true))
-        ));
-
-        if (secondsRemaining <= 0) {
-            lastCountdownShown.remove(player.getUUID());
-        }
-    }
+    protected boolean freezeDuringGracePeriod() { return false; }
 
     @Override
     public BlockPos getStartPos() { return arena.getStartPosition(); }
@@ -135,9 +104,7 @@ public class TntRunMinigame extends Minigame {
         arena.buildArena(level);
     }
 
-    @Override
-    public void resetArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Resetting TNT Run arena for rebuild...");
+    private void clearDecay(ServerLevel level) {
         for (Map.Entry<BlockPos, DecayEntry> entry : blocksToRemove.entrySet()) {
             if (entry.getValue().showCracks()) {
                 level.destroyBlockProgress(getCrackAnimationId(entry.getKey()), entry.getKey(), -1);
@@ -252,14 +219,22 @@ public class TntRunMinigame extends Minigame {
 
     @Override
     protected void onExit(ServerPlayer player, boolean success) {
-        lastCountdownShown.remove(player.getUUID());
         if (success) {
             Chat.SendAlert(player, "&aYou survived the TNT Run!");
         } else {
             Chat.SendAlert(player, "&7You fell into the void! TNT Run failed!");
         }
+    }
+
+    @Override
+    protected void onSessionEnd(ServerPlayer player) {
+        // The floors are consumed during play, so rebuild before the next run.
+        ServerLevel level = MinigameDimension.getMinigameLevel(player);
+        if (level != null) {
+            clearDecay(level);
+        }
         if (activeSessions.isEmpty()) {
-            markArenaNeedsRebuild();
+            arenaBuilt = false;
         }
     }
 }

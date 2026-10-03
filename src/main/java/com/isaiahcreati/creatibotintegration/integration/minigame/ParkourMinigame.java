@@ -33,9 +33,6 @@ public class ParkourMinigame extends Minigame {
         checkpointRespawns.remove(player.getUUID());
         checkpointBonusTicks.remove(player.getUUID());
         announcedCheckpoints.remove(player.getUUID());
-        if (course.needsRebuild()) {
-            arenaBuilt = false;
-        }
         super.enterPlayer(player, redeemerName);
         if (isInActiveMinigame(player)) {
             course.reconcileFloatingText((ServerLevel) player.level());
@@ -83,15 +80,14 @@ public class ParkourMinigame extends Minigame {
     public float getFailDamage() { return Config.PARKOUR_FAIL_DAMAGE.get().floatValue(); }
 
     @Override
-    public void buildArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Building parkour course...");
-        course.buildIfNeeded(level);
+    protected boolean arenaNeedsRebuild() {
+        return super.arenaNeedsRebuild() || course.needsRebuild();
     }
 
     @Override
-    public void resetArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Rebuilding parkour course...");
-        course.forceRebuild(level);
+    public void buildArena(ServerLevel level) {
+        CreatiIntegration.LOGGER.info("Building parkour course...");
+        course.buildIfNeeded(level);
     }
 
     @Override
@@ -161,9 +157,6 @@ public class ParkourMinigame extends Minigame {
 
     @Override
     protected void onExit(ServerPlayer player, boolean success) {
-        checkpointRespawns.remove(player.getUUID());
-        checkpointBonusTicks.remove(player.getUUID());
-        announcedCheckpoints.remove(player.getUUID());
         if (success) {
             Chat.SendAlert(player, "&aYou escaped the Parkour Course!");
         } else {
@@ -172,8 +165,7 @@ public class ParkourMinigame extends Minigame {
     }
 
     @Override
-    public void handlePlayerReconnect(ServerPlayer player) {
-        super.handlePlayerReconnect(player);
+    protected void onSessionEnd(ServerPlayer player) {
         checkpointRespawns.remove(player.getUUID());
         checkpointBonusTicks.remove(player.getUUID());
         announcedCheckpoints.remove(player.getUUID());

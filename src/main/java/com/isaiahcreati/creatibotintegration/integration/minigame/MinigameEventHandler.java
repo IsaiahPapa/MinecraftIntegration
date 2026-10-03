@@ -9,8 +9,10 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.GameType;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -18,7 +20,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class MinigameEventHandler {
 
@@ -26,13 +27,6 @@ public class MinigameEventHandler {
 
     public static void registerMinigame(Minigame game) {
         minigames.add(game);
-    }
-
-    private Minigame getMinigameForPlayer(ServerPlayer player) {
-        for (Minigame game : minigames) {
-            if (game.isInMinigame(player)) return game;
-        }
-        return null;
     }
 
     private Minigame getActiveMinigameForPlayer(ServerPlayer player) {
@@ -95,6 +89,27 @@ public class MinigameEventHandler {
     }
 
     @SubscribeEvent
+    public void onItemToss(ItemTossEvent event) {
+        if (!(event.getPlayer() instanceof ServerPlayer player)) return;
+        if (getActiveMinigameForPlayer(player) == null) return;
+
+        // Arena item entities are wiped between sessions, so a dropped item
+        // would be lost for good. Put it straight back into the inventory.
+        event.setCanceled(true);
+        player.getInventory().placeItemBackInInventory(event.getEntity().getItem().copy());
+    }
+
+    @SubscribeEvent
+    public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (getActiveMinigameForPlayer(player) == null) return;
+
+        // Ender pearls, wind charges, rockets, tridents, and potions all let a
+        // player skip or escape the arena, so held items stay inert here.
+        event.setCanceled(true);
+    }
+
+    @SubscribeEvent
     public void onEntityDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof net.minecraft.world.entity.LivingEntity living) {
             Taunts.onGremlinDeath(living);
@@ -128,7 +143,6 @@ public class MinigameEventHandler {
         // client can never carry sidebar data over from another world.
         QueueManager.sendQueueUpdate(player);
 
-        UUID uuid = player.getUUID();
         boolean wasInMinigame = false;
         for (Minigame game : minigames) {
             if (game.isInMinigame(player)) {
@@ -137,15 +151,12 @@ public class MinigameEventHandler {
             }
         }
 
-        // Safety net: if the player is in the minigame dimension but not tracked
-        // by any minigame (e.g. after a mod version change wiped the session
-        // state), teleport them to the overworld and restore survival mode.
-        if (!wasInMinigame && MinigameDimension.isMinigameDimension(player.level())) {
-            net.minecraft.server.level.ServerLevel overworld = player.level().getServer().overworld();
-            player.teleportTo(overworld, 0.5, 100, 0.5, java.util.Set.of(), 0f, 0f, false);
-            player.setGameMode(GameType.SURVIVAL);
-            player.removeEffect(net.minecraft.world.effect.MobEffects.RESISTANCE);
-            player.removeEffect(net.minecraft.world.effect.MobEffects.SLOW_FALLING);
+        // Sessions only live in memory, so after a restart or crash fall back
+        // to the snapshot saved on the player. If even that is missing (e.g. a
+        // save from an older mod version), send them to the world spawn.
+        if (!wasInMinigame && !Minigame.recoverPersistedSession(player)
+                && MinigameDimension.isMinigameDimension(player.level())) {
+            Minigame.rescueStrandedPlayer(player);
         }
     }
 

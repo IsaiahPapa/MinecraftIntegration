@@ -58,12 +58,6 @@ public class DropperMinigame extends Minigame {
     }
 
     @Override
-    public void resetArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Rebuilding Dropper course...");
-        arena.rebuildArena(level);
-    }
-
-    @Override
     public boolean checkWin(ServerPlayer player) {
         return isTouchingWaterTarget(player);
     }
@@ -102,9 +96,6 @@ public class DropperMinigame extends Minigame {
             Chat.SendAlert(player, "&aYou landed the Dropper!");
         } else {
             Chat.SendAlert(player, "&7You missed the water! Dropper failed!");
-        }
-        if (activeSessions.isEmpty()) {
-            markArenaNeedsRebuild();
         }
     }
 }

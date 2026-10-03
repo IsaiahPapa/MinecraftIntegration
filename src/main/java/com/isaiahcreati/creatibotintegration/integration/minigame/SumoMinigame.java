@@ -9,8 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
@@ -21,21 +19,13 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 public class SumoMinigame extends Minigame {
 
     private final SumoArena arena = new SumoArena();
     private final List<Mob> arenaMobs = new ArrayList<>();
-    private final Map<UUID, Integer> lastCountdownShown = new HashMap<>();
-
-    // Snapshot of each player's full inventory so we can restore it on exit.
-    private final Map<UUID, List<ItemStack>> savedInventories = new HashMap<>();
-
     private static final int GRACE_SECONDS = 5;
 
     @Override
@@ -64,9 +54,6 @@ public class SumoMinigame extends Minigame {
     public boolean isTimerSurvival() { return false; }
 
     @Override
-    public boolean hasGracePeriod() { return true; }
-
-    @Override
     public int getGracePeriodSeconds() { return GRACE_SECONDS; }
 
     @Override
@@ -81,47 +68,6 @@ public class SumoMinigame extends Minigame {
         clearArenaMobs();
         arena.clearMobs(level);
         arena.buildArena(level);
-    }
-
-    @Override
-    public void resetArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Rebuilding Arena course...");
-        arena.rebuildArena(level);
-    }
-
-    @Override
-    protected void onGracePeriodCountdown(ServerPlayer player, int secondsRemaining) {
-        // Freeze the player and mobs during the grace period.
-        player.setDeltaMovement(0, 0, 0);
-        player.hurtMarked = true;
-        for (Mob mob : arenaMobs) {
-            mob.setDeltaMovement(0, 0, 0);
-            mob.hurtMarked = true;
-            mob.setTarget(null);
-        }
-
-        Integer lastShown = lastCountdownShown.get(player.getUUID());
-        if (lastShown != null && lastShown == secondsRemaining) return;
-        lastCountdownShown.put(player.getUUID(), secondsRemaining);
-
-        String text;
-        String colorHex;
-        if (secondsRemaining > 0) {
-            text = String.valueOf(secondsRemaining);
-            colorHex = secondsRemaining <= 2 ? "#FF5555" : "#FFFF55";
-        } else {
-            text = "GO!";
-            colorHex = "#55FF55";
-        }
-
-        player.connection.send(new ClientboundSetTitlesAnimationPacket(5, 15, 5));
-        player.connection.send(new ClientboundSetTitleTextPacket(
-                Component.literal(text).setStyle(Style.EMPTY.withColor(TextColor.parseColor(colorHex).getOrThrow()).withBold(true))
-        ));
-
-        if (secondsRemaining <= 0) {
-            lastCountdownShown.remove(player.getUUID());
-        }
     }
 
     @Override
@@ -165,33 +111,36 @@ public class SumoMinigame extends Minigame {
         } else {
             Chat.SendAlert(player, "&7You were knocked off the Arena!");
         }
+    }
+
+    @Override
+    protected void onSessionEnd(ServerPlayer player) {
         clearArenaMobs();
-        restoreInventory(player);
-        if (activeSessions.isEmpty()) {
-            markArenaNeedsRebuild();
+    }
+
+    @Override
+    protected void onGameStart(ServerPlayer player) {
+        for (Mob mob : arenaMobs) {
+            mob.setNoAi(false);
+            mob.setTarget(player);
         }
     }
 
     @Override
-    public void enterPlayer(ServerPlayer player, String redeemerName) {
-        super.enterPlayer(player, redeemerName);
-        if (!isInActiveMinigame(player)) return;
-
-        ServerLevel minigameLevel = MinigameDimension.getMinigameLevel(player);
-        if (minigameLevel == null) return;
-
+    protected void onSessionStart(ServerPlayer player, ServerLevel minigameLevel, MinigamePlayerState state) {
         // Purge untracked mobs left by a disconnect, restart, or interrupted
         // session before creating exactly one new wave.
         clearArenaMobs();
         arena.clearMobs(minigameLevel);
 
-        // Snapshot the player's inventory, then clear it and give a kit.
-        saveInventory(player);
+        // Snapshot the player's inventory, then clear it and give a kit. The
+        // base class restores the snapshot however the session ends.
+        state.setSavedInventory(snapshotInventory(player));
         clearInventory(player);
         giveKit(player);
 
-        // Spawn the mob ring on the platform edge. Mobs are frozen during the
-        // grace period via onGracePeriodCountdown.
+        // Spawn the mob ring on the platform edge. Mobs stay frozen until the
+        // countdown finishes (see onGameStart).
         BlockPos start = getStartPos();
         int min = Math.max(1, Math.min(3, Config.SUMO_MOB_MIN_COUNT.get()));
         int max = Math.max(min, Math.min(3, Config.SUMO_MOB_MAX_COUNT.get()));
@@ -207,19 +156,8 @@ public class SumoMinigame extends Minigame {
         for (Mob mob : spawned) {
             var kr = mob.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
             if (kr != null) kr.setBaseValue(0.0);
+            mob.setNoAi(true);
         }
-    }
-
-    @Override
-    public void handlePlayerReconnect(ServerPlayer player) {
-        boolean wasTracked = disconnectedSessions.containsKey(player.getUUID())
-                || activeSessions.containsKey(player.getUUID());
-        super.handlePlayerReconnect(player);
-        if (!wasTracked) return;
-
-        clearArenaMobs();
-        restoreInventory(player);
-        markArenaNeedsRebuild();
     }
 
     private void pruneMobs() {
@@ -245,12 +183,12 @@ public class SumoMinigame extends Minigame {
         arenaMobs.clear();
     }
 
-    private void saveInventory(ServerPlayer player) {
+    private List<ItemStack> snapshotInventory(ServerPlayer player) {
         List<ItemStack> snapshot = new ArrayList<>();
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             snapshot.add(player.getInventory().getItem(i).copy());
         }
-        savedInventories.put(player.getUUID(), snapshot);
+        return snapshot;
     }
 
     private void clearInventory(ServerPlayer player) {
@@ -289,14 +227,5 @@ public class SumoMinigame extends Minigame {
         piece.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 Component.literal("Arena Armor").withStyle(net.minecraft.ChatFormatting.AQUA));
         return piece;
-    }
-
-    private void restoreInventory(ServerPlayer player) {
-        List<ItemStack> snapshot = savedInventories.remove(player.getUUID());
-        if (snapshot == null) return;
-        for (int i = 0; i < player.getInventory().getContainerSize() && i < snapshot.size(); i++) {
-            player.getInventory().setItem(i, snapshot.get(i));
-        }
-        player.inventoryMenu.broadcastChanges();
     }
 }
