@@ -25,7 +25,6 @@ public class DropperArena {
     private static final int BOTTOM_Y = 55;
     private static final int FLOOR_Y = 55;
     private static final int WATER_Y = 55;
-    private static final int MAX_TERRAIN_RISE = 3;
     private static final int WALL_EXTEND_ABOVE_TOP = 3; // headroom above the standing block before the dome
 
     // The top of the shaft is fully open. A single floating block sits at the
@@ -58,9 +57,15 @@ public class DropperArena {
             Blocks.OBSIDIAN,
     };
 
+    private int builtWaterSize = 0;
+
     public BlockPos getStartPosition() {
         // Spawn on top of the single center floating block.
         return new BlockPos(CENTER_X, TOP_Y + 1, CENTER_Z);
+    }
+
+    public BlockPos getLaunchBlockPos() {
+        return new BlockPos(CENTER_X, TOP_Y, CENTER_Z);
     }
 
     public float getStartYaw() {
@@ -68,9 +73,16 @@ public class DropperArena {
         return 90f;
     }
 
-    public BlockPos getHoleCenter() {
-        // Kept for compatibility; the "hole" is now just the open shaft center.
-        return new BlockPos(CENTER_X, TOP_Y, CENTER_Z);
+    public float getStartPitch() {
+        // Tilt the view down the shaft so the glowing target is on screen.
+        return 40f;
+    }
+
+    public int getTopY() { return TOP_Y; }
+
+    /** True once the arena has been built with the currently configured pool size. */
+    public boolean isBuiltForCurrentConfig() {
+        return builtWaterSize == getWaterSize();
     }
 
     public BlockPos getWaterCenter() {
@@ -81,9 +93,6 @@ public class DropperArena {
         return Math.max(1, Config.DROPPER_WATER_SIZE.get());
     }
 
-    public int getWaterY() { return WATER_Y; }
-    public int getFloorY() { return FLOOR_Y; }
-    public int getMaxTerrainY() { return FLOOR_Y + MAX_TERRAIN_RISE; }
 
     public AABB getBounds() {
         int clearRadius = OUTER_RADIUS + 2;
@@ -145,23 +154,27 @@ public class DropperArena {
     }
 
     private int getTerrainRise(int x, int z) {
+        // The pool sits in a one-block-high glowing frame so it reads as the
+        // target from the top of the shaft, 85 blocks up.
+        if (isWaterBorder(x, z)) return 1;
         int dx = x - CENTER_X;
         int dz = z - CENTER_Z;
         int noise = Math.floorMod(dx * 37 + dz * 57 + dx * dz * 11, 29);
-        int rise = noise == 0 ? 3 : noise <= 4 ? 2 : noise <= 13 ? 1 : 0;
-        // Turn the target into a recessed pool within the terrain instead of
-        // outlining it with an obvious bright border.
-        return isWaterBorder(x, z) ? Math.max(1, rise) : rise;
+        return noise == 0 ? 3 : noise <= 4 ? 2 : noise <= 13 ? 1 : 0;
     }
 
     private Block getTerrainBlock(int x, int z, int dy, int rise) {
+        if (dy == rise && isWaterBorder(x, z)) {
+            return Blocks.GLOWSTONE;
+        }
         int variant = Math.floorMod((x - CENTER_X) * 17 + (z - CENTER_Z) * 31 + dy * 7, 10);
         if (dy == rise) {
+            // Deliberately no blue/cyan tops (prismarine, cyan terracotta):
+            // from the top of the shaft they were indistinguishable from water.
             return switch (variant) {
-                case 0, 1 -> Blocks.MOSS_BLOCK;
-                case 2, 3 -> Blocks.PRISMARINE;
-                case 4 -> Blocks.DARK_PRISMARINE;
-                case 5 -> Blocks.CYAN_TERRACOTTA;
+                case 0, 1, 2 -> Blocks.MOSS_BLOCK;
+                case 3, 4 -> Blocks.COARSE_DIRT;
+                case 5 -> Blocks.PACKED_MUD;
                 default -> Blocks.MOSSY_COBBLESTONE;
             };
         }
@@ -188,6 +201,7 @@ public class DropperArena {
 
     public void buildArena(ServerLevel level) {
         CreatiIntegration.LOGGER.info("Building Dropper arena...");
+        builtWaterSize = getWaterSize();
 
         clearFloatingText(level);
 
@@ -251,10 +265,7 @@ public class DropperArena {
             }
         }
 
-        // Single-block launch point: the player must keep their footing and
-        // deliberately step off into the shaft.
-        level.setBlock(new BlockPos(CENTER_X, TOP_Y, CENTER_Z),
-                Blocks.YELLOW_CONCRETE.defaultBlockState(), 2);
+        placeLaunchBlock(level);
 
         // Dome ceiling enclosing the top of the shaft so the player can't see
         // the sky. Built as a half-sphere from the outer radius curving upward,
@@ -263,19 +274,23 @@ public class DropperArena {
                 TOP_Y + WALL_EXTEND_ABOVE_TOP + 1, OUTER_RADIUS,
                 Blocks.GLASS.defaultBlockState(), Blocks.STONE_BRICKS.defaultBlockState());
 
-        // Floating labels offset to the side so the player isn't standing
-        // inside them.
-        spawnFloatingText(level, new BlockPos(CENTER_X + 3, TOP_Y + 2, CENTER_Z),
+        // Floating labels in front of the player (who spawns facing -X), but
+        // above eye level so they don't block the view down the shaft.
+        spawnFloatingText(level, new BlockPos(CENTER_X - 3, TOP_Y + 3, CENTER_Z),
                 Component.literal("\u00A79\u00A7lDropper").withStyle(style -> style.withBold(true)));
-        spawnFloatingText(level, new BlockPos(CENTER_X + 3, TOP_Y + 1, CENTER_Z),
-                Component.literal("\u00A77Land in the water!").withStyle(style -> style.withBold(false)));
+        spawnFloatingText(level, new BlockPos(CENTER_X - 3, TOP_Y + 2, CENTER_Z),
+                Component.literal("\u00A77Land in the glowing pool!").withStyle(style -> style.withBold(false)));
 
         CreatiIntegration.LOGGER.info("Dropper arena built!");
     }
 
-    public void rebuildArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Rebuilding Dropper arena...");
-        buildArena(level);
+    /**
+     * Single-block launch point: the player must keep their footing and
+     * deliberately step off into the shaft. It crumbles if they wait too long,
+     * so it is re-placed at the start of every run.
+     */
+    public void placeLaunchBlock(ServerLevel level) {
+        level.setBlock(getLaunchBlockPos(), Blocks.YELLOW_CONCRETE.defaultBlockState(), 2);
     }
 
     private void spawnFloatingText(ServerLevel level, BlockPos pos, Component text) {
