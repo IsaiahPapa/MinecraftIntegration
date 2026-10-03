@@ -1,10 +1,7 @@
 package com.isaiahcreati.creatibotintegration.integration;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Blocks;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaCanvas;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Shared geometry for the enclosed minigame arena roofs. */
 public final class ArenaDome {
@@ -17,22 +14,21 @@ public final class ArenaDome {
      * Builds a hollow, watertight half-dome. Each horizontal slice bridges to
      * the next slice instead of drawing an isolated ring. That overlap is what
      * keeps the steep upper curve sealed and gives the roof a real cap.
+     * Ribs run along the four compass axes, with lights set into the panels.
      */
     public static void build(
-            ServerLevel level,
+            ArenaCanvas canvas,
             int centerX,
             int centerZ,
             int baseY,
             int radius,
             BlockState panelState,
-            BlockState ribState
+            BlockState ribState,
+            BlockState lightState
     ) {
         if (radius < 2) {
             throw new IllegalArgumentException("Arena dome radius must be at least 2");
         }
-
-        BlockState lampState = Blocks.REDSTONE_LAMP.defaultBlockState()
-                .setValue(BlockStateProperties.LIT, true);
 
         for (int dy = 0; dy <= radius; dy++) {
             double outerRadius = sliceRadius(radius, dy);
@@ -50,7 +46,7 @@ public final class ArenaDome {
                     }
 
                     boolean onRib = dx == 0 || dz == 0;
-                    boolean isLamp = dx % 4 == 0 && dz % 4 == 0 && !onRib;
+                    boolean isLight = dx % 4 == 0 && dz % 4 == 0 && !onRib;
 
                     BlockState state;
                     if (isCollar) {
@@ -59,15 +55,15 @@ public final class ArenaDome {
                     } else if (isCap) {
                         // Keep the apex uniform and fully sealed.
                         state = panelState;
-                    } else if (isLamp) {
-                        state = lampState;
+                    } else if (isLight) {
+                        state = lightState;
                     } else if (onRib) {
                         state = ribState;
                     } else {
                         state = panelState;
                     }
 
-                    level.setBlock(new BlockPos(centerX + dx, baseY + dy, centerZ + dz), state, 2);
+                    canvas.set(centerX + dx, baseY + dy, centerZ + dz, state);
                 }
             }
         }
