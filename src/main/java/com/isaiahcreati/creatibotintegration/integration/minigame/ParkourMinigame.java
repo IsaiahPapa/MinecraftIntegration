@@ -91,7 +91,6 @@ public class ParkourMinigame extends Minigame {
         checkpointRespawns.remove(player.getUUID());
         checkpointBonusTicks.remove(player.getUUID());
         fallCounts.remove(player.getUUID());
-        course.reconcileFloatingText(level);
     }
 
     @Override
@@ -111,10 +110,6 @@ public class ParkourMinigame extends Minigame {
 
     @Override
     public void onTick(ServerPlayer player, long currentTick, long elapsedTicks) {
-        if (currentTick % 10 == 0) {
-            course.reconcileFloatingText((ServerLevel) player.level());
-        }
-
         if (course.hasCheckpoint() && course.isInCheckpointArea(player.blockPosition())
                 && !checkpointRespawns.containsKey(player.getUUID())) {
             checkpointRespawns.put(player.getUUID(), course.getCheckpointRespawnPosition());

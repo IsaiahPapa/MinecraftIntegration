@@ -2,23 +2,22 @@ package com.isaiahcreati.creatibotintegration.integration;
 
 import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaCanvas;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaLabel;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaLabels;
+import com.isaiahcreati.creatibotintegration.integration.arena.LevelCanvas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.phys.AABB;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ParkourCourse {
-
-    private static final String TEXT_MARKER_TAG = "creati_parkour_text";
-    private record FloatingLabel(BlockPos pos, Component text) {}
 
     /** Inclusive block area a player stands in (feet level) to finish. */
     private record FinishPad(int minX, int maxX, int feetY, int minZ, int maxZ) {
@@ -29,7 +28,8 @@ public class ParkourCourse {
         }
     }
 
-    private final List<ArmorStand> floatingTextStands = new ArrayList<>();
+    /** Materials for the gate the player starts behind. */
+    private record GateStyle(Block pillar, Block cap, Block lintel, Block keystone) {}
 
     private static final BlockPos V1_START = new BlockPos(0, 65, 0);
     private static final FinishPad V1_FINISH = new FinishPad(-1, 1, 67, 41, 43);
@@ -108,107 +108,95 @@ public class ParkourCourse {
         if (!needsRebuild()) return;
         int version = getConfiguredArenaVersion();
         CreatiIntegration.LOGGER.info("Building parkour course version {}...", version);
-        generateCourse(parkourLevel, version);
+        build(new LevelCanvas(parkourLevel), version);
+        ArenaLabels.replace(parkourLevel, getBounds(), getLabels(version));
         courseBuilt = true;
         builtVersion = version;
         CreatiIntegration.LOGGER.info("Parkour course version {} built!", version);
     }
 
-    private void generateCourse(ServerLevel level, int version) {
-        clearFloatingText(level);
-
+    /** Places every block of the course. Separate from the level so tests can build it. */
+    public static void build(ArenaCanvas canvas, int version) {
         // Clear the full course envelope so layout changes never leave stale
         // platforms, frames, or water behind when switching versions.
-        for (int x = -12; x <= 12; x++) {
-            for (int z = -8; z <= 60; z++) {
-                for (int y = 48; y <= 78; y++) {
-                    level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2);
-                }
-            }
-        }
-
-        // The block pass synchronously loads every course chunk. Clear text a
-        // second time now that markers saved near old checkpoints and finish
-        // platforms are guaranteed to be loaded and visible to the query.
-        clearFloatingText(level);
+        canvas.clear(-12, 48, -8, 12, 78, 60);
 
         switch (version) {
-            case 1 -> buildLegacyCourse(level);
-            case 3 -> buildPrismRelay(level);
-            default -> buildFoundrySprint(level);
+            case 1 -> buildLegacyCourse(canvas);
+            case 3 -> buildPrismRelay(canvas);
+            default -> buildFoundrySprint(canvas);
         }
-        spawnVersionLabels(level, version);
     }
 
-    private void buildLegacyCourse(ServerLevel level) {
+    private static void buildLegacyCourse(ArenaCanvas canvas) {
+        buildStartGate(canvas, 1, 2,
+                new GateStyle(Blocks.STONE_BRICKS, Blocks.CHISELED_STONE_BRICKS, Blocks.STONE_BRICKS, Blocks.GOLD_BLOCK));
 
         // 1. Start platform (3x3 gold)
-        buildPlatform(level, 0, 64, 0, 3, Blocks.GOLD_BLOCK);
+        buildPlatform(canvas, 0, 64, 0, 3, Blocks.GOLD_BLOCK);
 
         // 2. Flat warmup gap (1x1 stone)
-        buildPlatform(level, 0, 64, 3, 1, Blocks.STONE);
+        buildPlatform(canvas, 0, 64, 3, 1, Blocks.STONE);
 
         // 3. Lateral movement (1x1 stone)
-        buildPlatform(level, 1, 64, 6, 1, Blocks.STONE);
+        buildPlatform(canvas, 1, 64, 6, 1, Blocks.STONE);
 
         // 4. Step up +1 (1x1 andesite)
-        buildPlatform(level, 0, 65, 9, 1, Blocks.POLISHED_ANDESITE);
+        buildPlatform(canvas, 0, 65, 9, 1, Blocks.POLISHED_ANDESITE);
 
         // 5. Slime block bounce (1x1) — landing on slime bounces the player;
         //    they must control the bounce to reach the next platform.
-        buildPlatform(level, 0, 65, 13, 1, Blocks.SLIME_BLOCK);
+        buildPlatform(canvas, 0, 65, 13, 1, Blocks.SLIME_BLOCK);
 
         // 6. Landing after slime bounce (1x1 stone)
-        buildPlatform(level, 0, 65, 16, 1, Blocks.STONE);
+        buildPlatform(canvas, 0, 65, 16, 1, Blocks.STONE);
 
         // 7. Packed ice slide platform (3x3) — the player must control their
         //    momentum to avoid sliding off the edge.
-        buildPlatform(level, 0, 65, 19, 3, Blocks.PACKED_ICE);
+        buildPlatform(canvas, 0, 65, 19, 3, Blocks.PACKED_ICE);
 
         // 8. Step up +1 from ice (1x1 cobblestone)
-        buildPlatform(level, 0, 66, 22, 1, Blocks.COBBLESTONE);
+        buildPlatform(canvas, 0, 66, 22, 1, Blocks.COBBLESTONE);
 
         // 9. Ladder climb segment.
         //    Cobblestone pillar (support) with ladders on the -Z face.
         int ladderZ = 25;
         for (int dy = 1; dy <= 3; dy++) {
-            setBlock(level, 0, 66 + dy, ladderZ, Blocks.COBBLESTONE);
-            level.setBlockAndUpdate(new BlockPos(0, 66 + dy, ladderZ - 1),
+            canvas.set(0, 66 + dy, ladderZ, Blocks.COBBLESTONE);
+            canvas.set(0, 66 + dy, ladderZ - 1,
                     Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, Direction.NORTH));
         }
         // Top of the pillar — landing before the next jump.
-        buildPlatform(level, 0, 70, 25, 1, Blocks.STONE_BRICKS);
+        buildPlatform(canvas, 0, 70, 25, 1, Blocks.STONE_BRICKS);
 
         // 10. Jump from ladder top (1x1 granite)
-        buildPlatform(level, 0, 70, 28, 1, Blocks.POLISHED_GRANITE);
+        buildPlatform(canvas, 0, 70, 28, 1, Blocks.POLISHED_GRANITE);
 
         // 11. Step down -1 (1x1 smooth stone)
-        buildPlatform(level, 0, 69, 31, 1, Blocks.SMOOTH_STONE);
+        buildPlatform(canvas, 0, 69, 31, 1, Blocks.SMOOTH_STONE);
 
         // 12. Slime block bounce landing (1x1) — the player bounces on landing,
         //     making the takeoff for the next jump require timing.
-        buildPlatform(level, 0, 69, 34, 1, Blocks.SLIME_BLOCK);
+        buildPlatform(canvas, 0, 69, 34, 1, Blocks.SLIME_BLOCK);
 
         // 13. Jump from honey — harder because honey slows momentum.
-        buildPlatform(level, 0, 69, 37, 1, Blocks.HONEY_BLOCK);
+        buildPlatform(canvas, 0, 69, 37, 1, Blocks.HONEY_BLOCK);
 
         // 14. Water hazard gap (1x1 iron) — a 3-block gap over a water pit.
         //     Falling into the water resets the player to the start.
-        buildPlatform(level, 0, 69, 40, 1, Blocks.IRON_BLOCK);
-        // Water pit below the gap (visual hazard + early-reset trigger). It is
-        // placed without block updates on a solid bed so it can't flow away
-        // into the void below the course.
+        buildPlatform(canvas, 0, 69, 40, 1, Blocks.IRON_BLOCK);
+        // Water pit below the gap (visual hazard + early-reset trigger), on a
+        // solid bed so it can't flow away into the void below the course.
         for (int dx = -1; dx <= 1; dx++) {
             for (int z = 38; z <= 39; z++) {
-                level.setBlock(new BlockPos(dx, 62, z), Blocks.STONE.defaultBlockState(), 2);
-                level.setBlock(new BlockPos(dx, 63, z), Blocks.WATER.defaultBlockState(), 2);
+                canvas.set(dx, 62, z, Blocks.STONE);
+                canvas.set(dx, 63, z, Blocks.WATER);
             }
         }
 
         // 15. End platform (3x3 diamond) with pressure plate — step down -3.
-        buildPlatform(level, 0, 66, 42, 3, Blocks.DIAMOND_BLOCK);
-        level.setBlockAndUpdate(new BlockPos(0, 67, 42), Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState());
-
+        buildPlatform(canvas, 0, 66, 42, 3, Blocks.DIAMOND_BLOCK);
+        buildFinishBeacon(canvas, 0, 66, 42);
     }
 
     /**
@@ -217,50 +205,49 @@ public class ParkourCourse {
      * momentum finish. A water basin returns misses quickly so a paid Twitch
      * interaction stays tense without becoming a long punishment.
      */
-    private void buildFoundrySprint(ServerLevel level) {
-        buildResetBasin(level);
+    private static void buildFoundrySprint(ArenaCanvas canvas) {
+        buildResetBasin(canvas);
 
         for (int frameZ : new int[]{-3, 13, 27, 41, 54}) {
-            buildFoundryFrame(level, frameZ);
+            buildFoundryFrame(canvas, frameZ);
         }
 
         // Start deck: enough room to orient, but the route immediately narrows.
-        buildRect(level, -2, 2, 64, -2, 2, Blocks.POLISHED_BLACKSTONE_BRICKS);
-        buildRect(level, -1, 1, 64, -1, 1, Blocks.GOLD_BLOCK);
-        setBlock(level, 0, 64, 2, Blocks.LIME_CONCRETE);
+        buildRect(canvas, -2, 2, 64, -2, 2, Blocks.POLISHED_BLACKSTONE_BRICKS);
+        buildRect(canvas, -1, 1, 64, -1, 1, Blocks.GOLD_BLOCK);
+        canvas.set(0, 64, 2, Blocks.LIME_CONCRETE);
+        buildStartGate(canvas, 2, 3,
+                new GateStyle(Blocks.POLISHED_BLACKSTONE_BRICKS, Blocks.COPPER_BLOCK, Blocks.CUT_COPPER, Blocks.SEA_LANTERN));
 
         // First half: diagonal changes and narrow landings demand deliberate
         // movement without turning the route into frame-perfect jumps.
-        buildRect(level, 0, 1, 64, 5, 6, Blocks.CUT_COPPER);
-        buildRect(level, -2, -2, 65, 9, 10, Blocks.EXPOSED_CUT_COPPER);
-        buildRect(level, -3, -3, 65, 13, 15, Blocks.WEATHERED_CUT_COPPER);
-        buildRect(level, -1, -1, 66, 18, 19, Blocks.OXIDIZED_CUT_COPPER);
+        buildRect(canvas, 0, 1, 64, 5, 6, Blocks.CUT_COPPER);
+        buildRect(canvas, -2, -2, 65, 9, 10, Blocks.EXPOSED_CUT_COPPER);
+        buildRect(canvas, -3, -3, 65, 13, 15, Blocks.WEATHERED_CUT_COPPER);
+        buildRect(canvas, -1, -1, 66, 18, 19, Blocks.OXIDIZED_CUT_COPPER);
 
         // Midpoint checkpoint. Missing after this point returns here rather
         // than invalidating the entire run.
-        buildRect(level, -1, 1, 66, 22, 24, Blocks.POLISHED_BLACKSTONE_BRICKS);
-        setBlock(level, 0, 66, 23, Blocks.GOLD_BLOCK);
-        level.setBlockAndUpdate(V2_CHECKPOINT_PLATE,
-                Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE.defaultBlockState());
+        buildRect(canvas, -1, 1, 66, 22, 24, Blocks.POLISHED_BLACKSTONE_BRICKS);
+        canvas.set(0, 66, 23, Blocks.GOLD_BLOCK);
+        set(canvas, V2_CHECKPOINT_PLATE, Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE);
 
         // Second half: compact 1x2 landings make the rising diagonal less
         // automatic while preserving a readable sprint rhythm.
-        buildRect(level, 3, 3, 67, 27, 28, Blocks.CUT_COPPER);
-        buildRect(level, 5, 6, 68, 31, 31, Blocks.EXPOSED_CUT_COPPER);
+        buildRect(canvas, 3, 3, 67, 27, 28, Blocks.CUT_COPPER);
+        buildRect(canvas, 5, 6, 68, 31, 31, Blocks.EXPOSED_CUT_COPPER);
         // Kept within a 1x2 diagonal of the previous pad: the old position
         // asked for a three-block gap while climbing, the only near-maximum
         // jump on an otherwise rhythm-focused course.
-        buildRect(level, 3, 3, 69, 34, 35, Blocks.WEATHERED_CUT_COPPER);
+        buildRect(canvas, 3, 3, 69, 34, 35, Blocks.WEATHERED_CUT_COPPER);
 
         // Ice supplies momentum for the final three-block gap. The finish is
         // 5x5, so the last jump has a generous landing instead of a tiny pad.
-        buildRect(level, 0, 0, 69, 38, 42, Blocks.PACKED_ICE);
-        setBlock(level, 0, 69, 42, Blocks.LIME_CONCRETE);
-        buildRect(level, -2, 2, 69, 46, 50, Blocks.DIAMOND_BLOCK);
-        buildRect(level, -1, 1, 69, 47, 49, Blocks.EMERALD_BLOCK);
-        level.setBlockAndUpdate(new BlockPos(0, 70, 48),
-                Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState());
-
+        buildRect(canvas, 0, 0, 69, 38, 42, Blocks.PACKED_ICE);
+        canvas.set(0, 69, 42, Blocks.LIME_CONCRETE);
+        buildRect(canvas, -2, 2, 69, 46, 50, Blocks.DIAMOND_BLOCK);
+        buildRect(canvas, -1, 1, 69, 47, 49, Blocks.EMERALD_BLOCK);
+        buildFinishBeacon(canvas, 0, 69, 48);
     }
 
     /**
@@ -269,262 +256,173 @@ public class ParkourCourse {
      * feels distinct from the mostly forward Foundry Sprint. One checkpoint
      * keeps the Twitch interaction quick even when the player misses late.
      */
-    private void buildPrismRelay(ServerLevel level) {
-        buildRelayBasin(level);
+    private static void buildPrismRelay(ArenaCanvas canvas) {
+        buildRelayBasin(canvas);
 
         for (int archZ : new int[]{-3, 10, 24, 38, 56}) {
-            buildRelayArch(level, archZ);
+            buildRelayArch(canvas, archZ);
         }
 
         // Broad launch deck, followed by an alternating series of increasingly
         // precise landings. The cyan block clearly identifies the first jump.
-        buildRect(level, -2, 2, 64, -2, 2, Blocks.QUARTZ_BRICKS);
-        buildRect(level, -1, 1, 64, -1, 1, Blocks.AMETHYST_BLOCK);
-        setBlock(level, 0, 64, 2, Blocks.CYAN_CONCRETE);
+        buildRect(canvas, -2, 2, 64, -2, 2, Blocks.QUARTZ_BRICKS);
+        buildRect(canvas, -1, 1, 64, -1, 1, Blocks.AMETHYST_BLOCK);
+        canvas.set(0, 64, 2, Blocks.CYAN_CONCRETE);
+        buildStartGate(canvas, 2, 3,
+                new GateStyle(Blocks.QUARTZ_PILLAR, Blocks.AMETHYST_BLOCK, Blocks.SMOOTH_QUARTZ, Blocks.SEA_LANTERN));
 
-        buildRect(level, -3, -2, 64, 5, 6, Blocks.PURPUR_BLOCK);
-        buildRect(level, 0, 0, 65, 9, 10, Blocks.CHISELED_QUARTZ_BLOCK);
-        buildRect(level, 3, 4, 65, 13, 13, Blocks.AMETHYST_BLOCK);
-        buildRect(level, 1, 1, 65, 16, 17, Blocks.PURPUR_BLOCK);
-        buildRect(level, -2, -1, 66, 20, 20, Blocks.CHISELED_QUARTZ_BLOCK);
+        buildRect(canvas, -3, -2, 64, 5, 6, Blocks.PURPUR_BLOCK);
+        buildRect(canvas, 0, 0, 65, 9, 10, Blocks.CHISELED_QUARTZ_BLOCK);
+        buildRect(canvas, 3, 4, 65, 13, 13, Blocks.AMETHYST_BLOCK);
+        buildRect(canvas, 1, 1, 65, 16, 17, Blocks.PURPUR_BLOCK);
+        buildRect(canvas, -2, -1, 66, 20, 20, Blocks.CHISELED_QUARTZ_BLOCK);
 
         // The relay pad is large enough to stabilize, but the route immediately
         // returns to narrow alternating jumps afterward.
-        buildRect(level, -4, -2, 66, 23, 25, Blocks.QUARTZ_BRICKS);
-        setBlock(level, -3, 66, 24, Blocks.GOLD_BLOCK);
-        level.setBlockAndUpdate(V3_CHECKPOINT_PLATE,
-                Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE.defaultBlockState());
+        buildRect(canvas, -4, -2, 66, 23, 25, Blocks.QUARTZ_BRICKS);
+        canvas.set(-3, 66, 24, Blocks.GOLD_BLOCK);
+        set(canvas, V3_CHECKPOINT_PLATE, Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE);
 
-        buildRect(level, 0, 1, 67, 28, 29, Blocks.AMETHYST_BLOCK);
-        buildRect(level, 3, 3, 68, 32, 33, Blocks.PURPUR_BLOCK);
-        buildRect(level, 0, 0, 68, 36, 37, Blocks.CHISELED_QUARTZ_BLOCK);
-        buildRect(level, -3, -2, 69, 40, 40, Blocks.AMETHYST_BLOCK);
-        buildRect(level, 0, 0, 69, 43, 44, Blocks.PURPUR_BLOCK);
-        buildRect(level, 3, 4, 69, 47, 47, Blocks.CHISELED_QUARTZ_BLOCK);
+        buildRect(canvas, 0, 1, 67, 28, 29, Blocks.AMETHYST_BLOCK);
+        buildRect(canvas, 3, 3, 68, 32, 33, Blocks.PURPUR_BLOCK);
+        buildRect(canvas, 0, 0, 68, 36, 37, Blocks.CHISELED_QUARTZ_BLOCK);
+        buildRect(canvas, -3, -2, 69, 40, 40, Blocks.AMETHYST_BLOCK);
+        buildRect(canvas, 0, 0, 69, 43, 44, Blocks.PURPUR_BLOCK);
+        buildRect(canvas, 3, 4, 69, 47, 47, Blocks.CHISELED_QUARTZ_BLOCK);
 
         // A three-block final gap with a broad landing, so success is about
         // carrying momentum rather than hitting one exact pixel.
-        buildRect(level, 0, 4, 69, 51, 55, Blocks.QUARTZ_BRICKS);
-        buildRect(level, 1, 3, 69, 52, 54, Blocks.DIAMOND_BLOCK);
-        setBlock(level, 2, 69, 53, Blocks.EMERALD_BLOCK);
-        level.setBlockAndUpdate(new BlockPos(2, 70, 53),
-                Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState());
-
+        buildRect(canvas, 0, 4, 69, 51, 55, Blocks.QUARTZ_BRICKS);
+        buildRect(canvas, 1, 3, 69, 52, 54, Blocks.DIAMOND_BLOCK);
+        buildFinishBeacon(canvas, 2, 69, 53);
     }
 
-    private void buildResetBasin(ServerLevel level) {
+    /**
+     * A gate straddling the front edge of the start deck, so the course
+     * visibly begins at a doorway. The lintel sits high enough to clear a
+     * full jump through it.
+     */
+    private static void buildStartGate(ArenaCanvas canvas, int z, int halfWidth, GateStyle style) {
+        for (int x : new int[]{-halfWidth, halfWidth}) {
+            for (int y = 64; y <= 68; y++) {
+                canvas.set(x, y, z, y == 68 ? style.cap() : style.pillar());
+            }
+        }
+        for (int x = -halfWidth; x <= halfWidth; x++) {
+            canvas.set(x, 69, z, x == 0 ? style.keystone() : style.lintel());
+        }
+    }
+
+    /**
+     * Turns the middle of the finish pad into a beacon on an iron base. Its
+     * beam is visible from the start, so the goal is never in doubt.
+     */
+    private static void buildFinishBeacon(ArenaCanvas canvas, int x, int y, int z) {
+        buildRect(canvas, x - 1, x + 1, y - 1, z - 1, z + 1, Blocks.IRON_BLOCK);
+        canvas.set(x, y, z, Blocks.BEACON);
+        canvas.set(x, y + 1, z, Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE);
+    }
+
+    private static void buildResetBasin(ArenaCanvas canvas) {
         int minX = -10, maxX = 10;
         int minZ = -4, maxZ = 54;
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
                 boolean boundary = x == minX || x == maxX || z == minZ || z == maxZ;
-                level.setBlock(new BlockPos(x, 50, z), Blocks.DARK_PRISMARINE.defaultBlockState(), 2);
+                canvas.set(x, 50, z, Blocks.DARK_PRISMARINE);
                 if (boundary) {
                     for (int y = 51; y <= 54; y++) {
-                        Block wallBlock = (y == 54 && Math.floorMod(x + z, 6) == 0)
+                        canvas.set(x, y, z, (y == 54 && Math.floorMod(x + z, 6) == 0)
                                 ? Blocks.SEA_LANTERN
-                                : Blocks.PRISMARINE_BRICKS;
-                        level.setBlock(new BlockPos(x, y, z), wallBlock.defaultBlockState(), 2);
+                                : Blocks.PRISMARINE_BRICKS);
                     }
                 } else {
-                    level.setBlock(new BlockPos(x, 51, z), Blocks.WATER.defaultBlockState(), 2);
+                    canvas.set(x, 51, z, Blocks.WATER);
                 }
             }
         }
     }
 
-    private void buildFoundryFrame(ServerLevel level, int z) {
+    private static void buildFoundryFrame(ArenaCanvas canvas, int z) {
         for (int y = 55; y <= 74; y++) {
             Block columnBlock = y % 5 == 0 ? Blocks.COPPER_BLOCK : Blocks.DEEPSLATE_BRICKS;
-            setBlock(level, -10, y, z, columnBlock);
-            setBlock(level, 10, y, z, columnBlock);
+            canvas.set(-10, y, z, columnBlock);
+            canvas.set(10, y, z, columnBlock);
         }
         for (int x = -10; x <= 10; x++) {
-            Block beamBlock = (x == -6 || x == 0 || x == 6)
+            canvas.set(x, 74, z, (x == -6 || x == 0 || x == 6)
                     ? Blocks.SEA_LANTERN
-                    : Blocks.POLISHED_BLACKSTONE_BRICKS;
-            setBlock(level, x, 74, z, beamBlock);
+                    : Blocks.POLISHED_BLACKSTONE_BRICKS);
         }
     }
 
-    private void buildRelayBasin(ServerLevel level) {
+    private static void buildRelayBasin(ArenaCanvas canvas) {
         int minX = -10, maxX = 10;
         int minZ = -4, maxZ = 58;
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
                 boolean boundary = x == minX || x == maxX || z == minZ || z == maxZ;
-                level.setBlock(new BlockPos(x, 50, z), Blocks.QUARTZ_BRICKS.defaultBlockState(), 2);
+                canvas.set(x, 50, z, Blocks.QUARTZ_BRICKS);
                 if (boundary) {
                     for (int y = 51; y <= 54; y++) {
-                        Block wallBlock = (y == 54 && Math.floorMod(x + z, 5) == 0)
+                        canvas.set(x, y, z, (y == 54 && Math.floorMod(x + z, 5) == 0)
                                 ? Blocks.SEA_LANTERN
-                                : Blocks.PURPUR_BLOCK;
-                        level.setBlock(new BlockPos(x, y, z), wallBlock.defaultBlockState(), 2);
+                                : Blocks.PURPUR_BLOCK);
                     }
                 } else {
-                    level.setBlock(new BlockPos(x, 51, z), Blocks.WATER.defaultBlockState(), 2);
+                    canvas.set(x, 51, z, Blocks.WATER);
                 }
             }
         }
     }
 
-    private void buildRelayArch(ServerLevel level, int z) {
+    private static void buildRelayArch(ArenaCanvas canvas, int z) {
         for (int y = 55; y <= 75; y++) {
             Block columnBlock = y % 4 == 0 ? Blocks.AMETHYST_BLOCK : Blocks.QUARTZ_PILLAR;
-            setBlock(level, -9, y, z, columnBlock);
-            setBlock(level, 9, y, z, columnBlock);
+            canvas.set(-9, y, z, columnBlock);
+            canvas.set(9, y, z, columnBlock);
         }
         for (int x = -9; x <= 9; x++) {
-            Block beamBlock = Math.floorMod(x, 4) == 0
+            canvas.set(x, 75, z, Math.floorMod(x, 4) == 0
                     ? Blocks.SEA_LANTERN
-                    : Blocks.SMOOTH_QUARTZ;
-            setBlock(level, x, 75, z, beamBlock);
+                    : Blocks.SMOOTH_QUARTZ);
         }
     }
 
-    private List<FloatingLabel> getVersionLabels(int version) {
+    private static List<ArenaLabel> getLabels(int version) {
         return switch (version) {
             case 1 -> List.of(
-                    new FloatingLabel(new BlockPos(0, 68, 0),
-                            Component.literal("\u00A7a\u00A7lStart").withStyle(style -> style.withBold(true))),
-                    new FloatingLabel(new BlockPos(0, 69, 42),
-                            Component.literal("\u00A7b\u00A7lFinish!").withStyle(style -> style.withBold(true)))
-            );
+                    new ArenaLabel(0.5, 70.6, 1.5, Component.literal("§a§lSTART"), 1.6F),
+                    ArenaLabel.of(0.5, 70.0, 42.5, Component.literal("§b§lFinish!")));
             case 3 -> List.of(
-                    new FloatingLabel(new BlockPos(0, 68, 0),
-                            Component.literal("\u00A7d\u00A7lPrism Relay \u00A77[V3]")
-                                    .withStyle(style -> style.withBold(true))),
-                    new FloatingLabel(new BlockPos(0, 67, 0),
-                            Component.literal("\u00A77Commit to the diagonals")),
-                    new FloatingLabel(new BlockPos(-3, 70, 24),
-                            Component.literal("\u00A7e\u00A7lRelay Checkpoint")),
-                    new FloatingLabel(new BlockPos(2, 73, 53),
-                            Component.literal("\u00A7b\u00A7lFinish!").withStyle(style -> style.withBold(true)))
-            );
+                    new ArenaLabel(0.5, 71.0, 2.5, Component.literal("§d§lPRISM RELAY"), 1.8F),
+                    ArenaLabel.of(0.5, 68.2, 2.5, Component.literal("§7Commit to the diagonals")),
+                    ArenaLabel.of(-2.5, 69.5, 24.5, Component.literal("§e§lCheckpoint")),
+                    new ArenaLabel(2.5, 73.0, 53.5, Component.literal("§b§lFinish!"), 1.6F));
             default -> List.of(
-                    new FloatingLabel(new BlockPos(0, 68, 0),
-                            Component.literal("\u00A76\u00A7lFoundry Sprint \u00A77[V2]")
-                                    .withStyle(style -> style.withBold(true))),
-                    new FloatingLabel(new BlockPos(0, 67, 0),
-                            Component.literal("\u00A77Keep your momentum")),
-                    new FloatingLabel(new BlockPos(0, 70, 23),
-                            Component.literal("\u00A7e\u00A7lCheckpoint")),
-                    new FloatingLabel(new BlockPos(0, 73, 48),
-                            Component.literal("\u00A7b\u00A7lFinish!").withStyle(style -> style.withBold(true)))
-            );
+                    new ArenaLabel(0.5, 71.0, 2.5, Component.literal("§6§lFOUNDRY SPRINT"), 1.8F),
+                    ArenaLabel.of(0.5, 68.2, 2.5, Component.literal("§7Keep your momentum")),
+                    ArenaLabel.of(0.5, 69.5, 23.5, Component.literal("§e§lCheckpoint")),
+                    new ArenaLabel(0.5, 73.0, 48.5, Component.literal("§b§lFinish!"), 1.6F));
         };
     }
 
-    private void spawnVersionLabels(ServerLevel level, int version) {
-        for (FloatingLabel label : getVersionLabels(version)) {
-            spawnFloatingText(level, label.pos(), label.text());
-        }
+    private static void set(ArenaCanvas canvas, BlockPos pos, Block block) {
+        canvas.set(pos.getX(), pos.getY(), pos.getZ(), block);
     }
 
-    /**
-     * Repairs labels as their chunks load during a run. Only one exact copy of
-     * each label belonging to the built arena version survives; markers from
-     * older layouts and duplicate saved entities are discarded.
-     */
-    public void reconcileFloatingText(ServerLevel level) {
-        List<FloatingLabel> desired = getVersionLabels(getArenaVersion());
-        boolean[] found = new boolean[desired.size()];
-
-        for (ArmorStand stand : level.getEntitiesOfClass(ArmorStand.class, getBounds())) {
-            Component name = stand.getCustomName();
-            if (!stand.isInvisible() || name == null) continue;
-
-            int match = -1;
-            for (int i = 0; i < desired.size(); i++) {
-                FloatingLabel label = desired.get(i);
-                if (stand.blockPosition().equals(label.pos())
-                        && name.getString().equals(label.text().getString())) {
-                    match = i;
-                    break;
-                }
-            }
-
-            if (match < 0 || found[match]) {
-                stand.discard();
-                floatingTextStands.remove(stand);
-            } else {
-                found[match] = true;
-                stand.addTag(TEXT_MARKER_TAG);
-                if (!floatingTextStands.contains(stand)) {
-                    floatingTextStands.add(stand);
-                }
-            }
-        }
-
-        floatingTextStands.removeIf(ArmorStand::isRemoved);
-        for (int i = 0; i < desired.size(); i++) {
-            FloatingLabel label = desired.get(i);
-            if (!found[i] && level.hasChunkAt(label.pos())) {
-                spawnFloatingText(level, label.pos(), label.text());
-            }
-        }
-    }
-
-    private void clearFloatingText(ServerLevel level) {
-        for (ArmorStand stand : floatingTextStands) {
-            stand.discard();
-        }
-        floatingTextStands.clear();
-        AABB box = getBounds();
-        for (ArmorStand stand : level.getEntitiesOfClass(ArmorStand.class, box)) {
-            stand.discard();
-        }
-    }
-
-    private void spawnFloatingText(ServerLevel level, BlockPos pos, Component text) {
-        // Rebuilds can happen before discarded entities have finished syncing
-        // to clients. Remove any marker already occupying this label position
-        // so repeated rebuilds never produce stacked text.
-        AABB markerBox = new AABB(
-                pos.getX() + 0.25, pos.getY() - 0.25, pos.getZ() + 0.25,
-                pos.getX() + 0.75, pos.getY() + 0.25, pos.getZ() + 0.75);
-        for (ArmorStand existing : level.getEntitiesOfClass(ArmorStand.class, markerBox)) {
-            if (existing.isInvisible() && existing.getCustomName() != null) {
-                existing.discard();
-            }
-        }
-
-        ArmorStand armorStand = new ArmorStand(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-        armorStand.setCustomName(text);
-        armorStand.setCustomNameVisible(true);
-        armorStand.setInvisible(true);
-        armorStand.setNoGravity(true);
-        armorStand.getEntityData().set(ArmorStand.DATA_CLIENT_FLAGS, (byte) (armorStand.getEntityData().get(ArmorStand.DATA_CLIENT_FLAGS) | 0x10));
-        armorStand.setInvulnerable(true);
-        armorStand.setSilent(true);
-        armorStand.addTag(TEXT_MARKER_TAG);
-        level.addFreshEntity(armorStand);
-        floatingTextStands.add(armorStand);
-    }
-
-    private void setBlock(ServerLevel level, int x, int y, int z, Block block) {
-        level.setBlockAndUpdate(new BlockPos(x, y, z), block.defaultBlockState());
-    }
-
-    private void buildRect(ServerLevel level, int minX, int maxX, int y,
-                           int minZ, int maxZ, Block block) {
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                setBlock(level, x, y, z, block);
-            }
-        }
+    private static void buildRect(ArenaCanvas canvas, int minX, int maxX, int y,
+                                  int minZ, int maxZ, Block block) {
+        canvas.fill(minX, y, minZ, maxX, y, maxZ, block);
     }
 
     /**
      * Builds a size x size platform centered on (centerX, centerZ) at height y.
      * size=1 -> 1x1, size=2 -> 2x2, size=3 -> 3x3 (correctly centered).
      */
-    private void buildPlatform(ServerLevel level, int centerX, int y, int centerZ, int size, Block block) {
+    private static void buildPlatform(ArenaCanvas canvas, int centerX, int y, int centerZ, int size, Block block) {
         int offset = (size - 1) / 2;
-        for (int dx = 0; dx < size; dx++) {
-            for (int dz = 0; dz < size; dz++) {
-                level.setBlockAndUpdate(new BlockPos(centerX - offset + dx, y, centerZ - offset + dz), block.defaultBlockState());
-            }
-        }
+        canvas.fill(centerX - offset, y, centerZ - offset,
+                centerX - offset + size - 1, y, centerZ - offset + size - 1, block);
     }
 }
