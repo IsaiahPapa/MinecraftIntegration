@@ -41,13 +41,24 @@ public class TntRunArena {
     private static final int CLEAR_BOTTOM_Y = 49;
     private static final int CLEAR_TOP_Y = 92; // covers the largest configurable dome roof
 
-    public static final int[] FLOOR_Y_LEVELS = FLOOR_Y_LEVELS_ALL;
+    // Geometry captured when the arena is built, so changing the config while
+    // a run is in progress can't desync the game logic from the blocks.
+    private int builtFloorSize = 0;
+    private int builtFloorCount = 0;
 
     public int getFloorSize() {
-        return Math.max(8, Config.TNT_RUN_FLOOR_SIZE.get());
+        return builtFloorSize > 0 ? builtFloorSize : getConfiguredFloorSize();
     }
 
     public int getFloorCount() {
+        return builtFloorCount > 0 ? builtFloorCount : getConfiguredFloorCount();
+    }
+
+    private static int getConfiguredFloorSize() {
+        return Math.max(8, Config.TNT_RUN_FLOOR_SIZE.get());
+    }
+
+    private static int getConfiguredFloorCount() {
         return Math.max(1, Math.min(3, Config.TNT_RUN_FLOOR_COUNT.get()));
     }
 
@@ -61,6 +72,17 @@ public class TntRunArena {
     }
 
     public int getHalf() { return getFloorSize() / 2; }
+
+    /**
+     * Radius of floor the player can actually stand on. The outermost ring of
+     * each floor sits underneath the perimeter wall.
+     */
+    public int getWalkableRadius() { return getHalf() - 2; }
+
+    public int getLowestFloorY() {
+        int[] floorYs = getFloorYLevels();
+        return floorYs[floorYs.length - 1];
+    }
     public int getMinX() { return CENTER_X - getHalf(); }
     public int getMaxX() { return CENTER_X + getHalf(); }
     public int getMinZ() { return CENTER_Z - getHalf(); }
@@ -79,9 +101,6 @@ public class TntRunArena {
     public BlockPos getStartPosition() {
         return new BlockPos(CENTER_X, FLOOR_1_Y + 1, CENTER_Z);
     }
-
-    public int getCenterX() { return CENTER_X; }
-    public int getCenterZ() { return CENTER_Z; }
 
     public AABB getBounds() {
         return new AABB(
@@ -104,6 +123,8 @@ public class TntRunArena {
     }
 
     public void buildArena(ServerLevel level) {
+        builtFloorSize = getConfiguredFloorSize();
+        builtFloorCount = getConfiguredFloorCount();
         CreatiIntegration.LOGGER.info("Building TNT Run arena ({}x{}, {} floors)...",
                 getFloorSize(), getFloorSize(), getFloorCount());
 
@@ -180,11 +201,6 @@ public class TntRunArena {
                 Component.literal("\u00A77Keep moving!").withStyle(style -> style.withBold(false)));
 
         CreatiIntegration.LOGGER.info("TNT Run arena built!");
-    }
-
-    public void rebuildArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Rebuilding TNT Run arena...");
-        buildArena(level);
     }
 
     private void spawnFloatingText(ServerLevel level, BlockPos pos, Component text) {
