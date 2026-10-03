@@ -2,60 +2,54 @@ package com.isaiahcreati.creatibotintegration.integration;
 
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import com.isaiahcreati.creatibotintegration.Config;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaCanvas;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaLabel;
+import com.isaiahcreati.creatibotintegration.integration.arena.ArenaLabels;
+import com.isaiahcreati.creatibotintegration.integration.arena.LevelCanvas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
-import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * "Into the Depths": the player starts on a grassy floating island, looking
+ * down a well, and falls through layers of the earth (stone, tuff, deepslate,
+ * then a lush cave) toward a glowing pool. A spiral of lights runs down the
+ * shaft wall so the speed of the fall reads on stream.
+ */
 public class DropperArena {
-
-    private final List<ArmorStand> floatingTextStands = new ArrayList<>();
 
     private static final int CENTER_X = 200;
     private static final int CENTER_Z = 200;
-    private static final int INNER_RADIUS = 7;
     private static final int OUTER_RADIUS = 8;
     private static final int TOP_Y = 140;
-    private static final int BOTTOM_Y = 55;
     private static final int FLOOR_Y = 55;
     private static final int WATER_Y = 55;
-    private static final int WALL_EXTEND_ABOVE_TOP = 3; // headroom above the standing block before the dome
 
-    // The top of the shaft is fully open. A single floating block sits at the
-    // center for the player to stand on, look around, and jump off when ready.
-    // This avoids the "instant fall on load" problem and accommodates slower
-    // computers / fog render distances.
+    // The surface island around the top of the well.
+    private static final int ISLAND_RADIUS = 13;
+    private static final int RIM_TOP_Y = TOP_Y + 1;
 
     // The water target is offset from the center so a straight drop misses it.
     // The player must steer laterally during the fall to land in the water.
     private static final int WATER_OFFSET_X = -5;
     private static final int WATER_OFFSET_Z = 0;
 
-    // Clean 16-entry gradient (top -> bottom), no duplicates.
-    private static final Block[] GRADIENT_BLOCKS = {
-            Blocks.WHITE_CONCRETE,
-            Blocks.LIGHT_BLUE_CONCRETE,
-            Blocks.CYAN_CONCRETE,
-            Blocks.BLUE_CONCRETE,
-            Blocks.PURPLE_CONCRETE,
-            Blocks.MAGENTA_CONCRETE,
-            Blocks.PINK_CONCRETE,
-            Blocks.RED_CONCRETE,
-            Blocks.ORANGE_CONCRETE,
-            Blocks.YELLOW_CONCRETE,
-            Blocks.LIME_CONCRETE,
-            Blocks.GREEN_CONCRETE,
-            Blocks.LIGHT_GRAY_CONCRETE,
-            Blocks.GRAY_CONCRETE,
-            Blocks.BLACK_CONCRETE,
-            Blocks.OBSIDIAN,
-    };
+    // Large enough to also clear the domed shaft built by older versions.
+    private static final int CLEAR_RADIUS = 15;
+    private static final int CLEAR_BOTTOM_Y = FLOOR_Y - 3;
+    private static final int CLEAR_TOP_Y = TOP_Y + 14;
+
+    // Depth bands, measured down from the top of the shaft.
+    private static final int STONE_DEPTH = 22;
+    private static final int TUFF_DEPTH = 44;
+    private static final int DEEPSLATE_DEPTH = 66;
 
     private int builtWaterSize = 0;
 
@@ -85,21 +79,14 @@ public class DropperArena {
         return builtWaterSize == getWaterSize();
     }
 
-    public BlockPos getWaterCenter() {
-        return new BlockPos(CENTER_X + WATER_OFFSET_X, WATER_Y, CENTER_Z + WATER_OFFSET_Z);
-    }
-
     public int getWaterSize() {
         return Math.max(1, Config.DROPPER_WATER_SIZE.get());
     }
 
-
     public AABB getBounds() {
-        int clearRadius = OUTER_RADIUS + 2;
-        int clearTopY = TOP_Y + WALL_EXTEND_ABOVE_TOP + OUTER_RADIUS + 2;
         return new AABB(
-                CENTER_X - clearRadius, BOTTOM_Y - 3, CENTER_Z - clearRadius,
-                CENTER_X + clearRadius + 1, clearTopY + 1, CENTER_Z + clearRadius + 1);
+                CENTER_X - CLEAR_RADIUS, CLEAR_BOTTOM_Y, CENTER_Z - CLEAR_RADIUS,
+                CENTER_X + CLEAR_RADIUS + 1, CLEAR_TOP_Y + 1, CENTER_Z + CLEAR_RADIUS + 1);
     }
 
     /**
@@ -108,184 +95,17 @@ public class DropperArena {
      * even if their feet catch the rim beside it.
      */
     public AABB getWaterTargetBounds() {
-        BlockPos center = getWaterCenter();
         int size = getWaterSize();
-        return new AABB(
-                center.getX(), WATER_Y, center.getZ(),
-                center.getX() + size, WATER_Y + 2, center.getZ() + size);
-    }
-
-    private Block getGradientBlock(int y) {
-        int totalHeight = TOP_Y - BOTTOM_Y;
-        int index = (int) ((double) (TOP_Y - y) / totalHeight * GRADIENT_BLOCKS.length);
-        index = Math.max(0, Math.min(GRADIENT_BLOCKS.length - 1, index));
-        return GRADIENT_BLOCKS[index];
-    }
-
-    private boolean isInCircle(int x, int z, int radius) {
-        double dx = x - CENTER_X;
-        double dz = z - CENTER_Z;
-        return dx * dx + dz * dz <= radius * radius;
-    }
-
-    private boolean isWallAt(int x, int z) {
-        return ArenaDome.isWallRing(x, z, CENTER_X, CENTER_Z, OUTER_RADIUS);
-    }
-
-    private boolean isInnerEdge(int x, int z) {
-        double dx = x - CENTER_X;
-        double dz = z - CENTER_Z;
-        double distSq = dx * dx + dz * dz;
-        double innerSq = (INNER_RADIUS - 1) * (INNER_RADIUS - 1);
-        double outerSq = INNER_RADIUS * INNER_RADIUS;
-        return distSq >= innerSq && distSq <= outerSq + 2;
-    }
-
-    private boolean isWaterBlock(int x, int z) {
-        BlockPos waterCenter = getWaterCenter();
-        int size = getWaterSize();
-        // Square pad from waterCenter spanning [0, size-1] in x and z.
-        int dx = x - waterCenter.getX();
-        int dz = z - waterCenter.getZ();
-        return dx >= 0 && dx < size && dz >= 0 && dz < size;
-    }
-
-    private boolean isWaterBorder(int x, int z) {
-        BlockPos waterCenter = getWaterCenter();
-        int size = getWaterSize();
-        int dx = x - waterCenter.getX();
-        int dz = z - waterCenter.getZ();
-        return dx >= -1 && dx <= size && dz >= -1 && dz <= size && !isWaterBlock(x, z);
-    }
-
-    private int getTerrainRise(int x, int z) {
-        // The pool is framed by glowstone flush with the water, so it reads as
-        // the target from 85 blocks up without a lip for players to land on.
-        if (isWaterBorder(x, z)) return 0;
-        int dx = x - CENTER_X;
-        int dz = z - CENTER_Z;
-        int noise = Math.floorMod(dx * 37 + dz * 57 + dx * dz * 11, 29);
-        return noise == 0 ? 3 : noise <= 4 ? 2 : noise <= 13 ? 1 : 0;
-    }
-
-    private Block getTerrainBlock(int x, int z, int dy, int rise) {
-        if (dy == rise && isWaterBorder(x, z)) {
-            return Blocks.GLOWSTONE;
-        }
-        int variant = Math.floorMod((x - CENTER_X) * 17 + (z - CENTER_Z) * 31 + dy * 7, 10);
-        if (dy == rise) {
-            // Deliberately no blue/cyan tops (prismarine, cyan terracotta):
-            // from the top of the shaft they were indistinguishable from water.
-            return switch (variant) {
-                case 0, 1, 2 -> Blocks.MOSS_BLOCK;
-                case 3, 4 -> Blocks.COARSE_DIRT;
-                case 5 -> Blocks.PACKED_MUD;
-                default -> Blocks.MOSSY_COBBLESTONE;
-            };
-        }
-        return variant % 3 == 0 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS;
-    }
-
-    private void clearFloatingText(ServerLevel level) {
-        // Remove previously-spawned label armor stands by reference so they
-        // don't accumulate across rebuilds.
-        for (ArmorStand stand : floatingTextStands) {
-            stand.discard();
-        }
-        floatingTextStands.clear();
-        // Also sweep for any stray stands from old builds / version migrations.
-        int clearMin = OUTER_RADIUS + 2;
-        int clearTopY = TOP_Y + OUTER_RADIUS + 4;
-        AABB box = new AABB(
-                CENTER_X - clearMin, BOTTOM_Y - 3, CENTER_Z - clearMin,
-                CENTER_X + clearMin, clearTopY, CENTER_Z + clearMin);
-        for (ArmorStand stand : level.getEntitiesOfClass(ArmorStand.class, box)) {
-            stand.discard();
-        }
+        int x = CENTER_X + WATER_OFFSET_X;
+        int z = CENTER_Z + WATER_OFFSET_Z;
+        return new AABB(x, WATER_Y, z, x + size, WATER_Y + 2, z + size);
     }
 
     public void buildArena(ServerLevel level) {
         CreatiIntegration.LOGGER.info("Building Dropper arena...");
         builtWaterSize = getWaterSize();
-
-        clearFloatingText(level);
-
-        int clearMin = OUTER_RADIUS + 2;
-        int clearTopY = TOP_Y + WALL_EXTEND_ABOVE_TOP + OUTER_RADIUS + 2;
-        for (int x = CENTER_X - clearMin; x <= CENTER_X + clearMin; x++) {
-            for (int z = CENTER_Z - clearMin; z <= CENTER_Z + clearMin; z++) {
-                for (int y = BOTTOM_Y - 3; y <= clearTopY; y++) {
-                    level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2);
-                }
-            }
-        }
-
-        for (int y = BOTTOM_Y; y <= TOP_Y + WALL_EXTEND_ABOVE_TOP; y++) {
-            for (int x = CENTER_X - OUTER_RADIUS - 1; x <= CENTER_X + OUTER_RADIUS + 1; x++) {
-                for (int z = CENTER_Z - OUTER_RADIUS - 1; z <= CENTER_Z + OUTER_RADIUS + 1; z++) {
-                    if (isWallAt(x, z)) {
-                        if (y > TOP_Y) {
-                            // Extension above the gradient shaft — stone bricks
-                            // to match the dome base.
-                            level.setBlock(new BlockPos(x, y, z), Blocks.STONE_BRICKS.defaultBlockState(), 2);
-                        } else {
-                            Block wallBlock = getGradientBlock(y);
-                            if ((TOP_Y - y) % 5 == 0 && isInnerEdge(x, z)) {
-                                level.setBlock(new BlockPos(x, y, z),
-                                        Blocks.SEA_LANTERN.defaultBlockState(), 2);
-                                continue;
-                            }
-                            level.setBlock(new BlockPos(x, y, z), wallBlock.defaultBlockState(), 2);
-                        }
-                    }
-                }
-            }
-        }
-
-        for (int x = CENTER_X - OUTER_RADIUS; x <= CENTER_X + OUTER_RADIUS; x++) {
-            for (int z = CENTER_Z - OUTER_RADIUS; z <= CENTER_Z + OUTER_RADIUS; z++) {
-                if (!isInCircle(x, z, OUTER_RADIUS)) continue;
-                level.setBlock(new BlockPos(x, BOTTOM_Y - 1, z), Blocks.DEEPSLATE.defaultBlockState(), 2);
-            }
-        }
-
-        for (int x = CENTER_X - OUTER_RADIUS; x <= CENTER_X + OUTER_RADIUS; x++) {
-            for (int z = CENTER_Z - OUTER_RADIUS; z <= CENTER_Z + OUTER_RADIUS; z++) {
-                if (!isInCircle(x, z, INNER_RADIUS)) continue;
-                if (isWaterBlock(x, z)) continue;
-                int rise = getTerrainRise(x, z);
-                for (int dy = 0; dy <= rise; dy++) {
-                    Block terrainBlock = getTerrainBlock(x, z, dy, rise);
-                    level.setBlock(new BlockPos(x, FLOOR_Y + dy, z),
-                            terrainBlock.defaultBlockState(), 2);
-                }
-            }
-        }
-
-        int waterSize = getWaterSize();
-        BlockPos waterCenter = getWaterCenter();
-        for (int dx = 0; dx < waterSize; dx++) {
-            for (int dz = 0; dz < waterSize; dz++) {
-                level.setBlock(waterCenter.offset(dx, 0, dz), Blocks.WATER.defaultBlockState(), 2);
-            }
-        }
-
-        placeLaunchBlock(level);
-
-        // Dome ceiling enclosing the top of the shaft so the player can't see
-        // the sky. Built as a half-sphere from the outer radius curving upward,
-        // with lit redstone lamps embedded for a warm glow.
-        ArenaDome.build(level, CENTER_X, CENTER_Z,
-                TOP_Y + WALL_EXTEND_ABOVE_TOP + 1, OUTER_RADIUS,
-                Blocks.GLASS.defaultBlockState(), Blocks.STONE_BRICKS.defaultBlockState());
-
-        // Floating labels in front of the player (who spawns facing -X), but
-        // above eye level so they don't block the view down the shaft.
-        spawnFloatingText(level, new BlockPos(CENTER_X - 3, TOP_Y + 3, CENTER_Z),
-                Component.literal("\u00A79\u00A7lDropper").withStyle(style -> style.withBold(true)));
-        spawnFloatingText(level, new BlockPos(CENTER_X - 3, TOP_Y + 2, CENTER_Z),
-                Component.literal("\u00A77Land in the glowing pool!").withStyle(style -> style.withBold(false)));
-
+        build(new LevelCanvas(level), builtWaterSize);
+        ArenaLabels.replace(level, getBounds(), getLabels());
         CreatiIntegration.LOGGER.info("Dropper arena built!");
     }
 
@@ -295,19 +115,213 @@ public class DropperArena {
      * so it is re-placed at the start of every run.
      */
     public void placeLaunchBlock(ServerLevel level) {
-        level.setBlock(getLaunchBlockPos(), Blocks.YELLOW_CONCRETE.defaultBlockState(), 2);
+        new LevelCanvas(level).set(CENTER_X, TOP_Y, CENTER_Z, Blocks.GOLD_BLOCK);
     }
 
-    private void spawnFloatingText(ServerLevel level, BlockPos pos, Component text) {
-        ArmorStand armorStand = new ArmorStand(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-        armorStand.setCustomName(text);
-        armorStand.setCustomNameVisible(true);
-        armorStand.setInvisible(true);
-        armorStand.setNoGravity(true);
-        armorStand.getEntityData().set(ArmorStand.DATA_CLIENT_FLAGS, (byte) (armorStand.getEntityData().get(ArmorStand.DATA_CLIENT_FLAGS) | 0x10));
-        armorStand.setInvulnerable(true);
-        armorStand.setSilent(true);
-        level.addFreshEntity(armorStand);
-        floatingTextStands.add(armorStand);
+    /** Places every block of the arena. Separate from the level so tests can build it. */
+    public static void build(ArenaCanvas canvas, int waterSize) {
+        canvas.clear(CENTER_X - CLEAR_RADIUS, CLEAR_BOTTOM_Y, CENTER_Z - CLEAR_RADIUS,
+                CENTER_X + CLEAR_RADIUS, CLEAR_TOP_Y, CENTER_Z + CLEAR_RADIUS);
+
+        for (int x = CENTER_X - ISLAND_RADIUS; x <= CENTER_X + ISLAND_RADIUS; x++) {
+            for (int z = CENTER_Z - ISLAND_RADIUS; z <= CENTER_Z + ISLAND_RADIUS; z++) {
+                int dx = x - CENTER_X;
+                int dz = z - CENTER_Z;
+                double distance = Math.sqrt(dx * dx + dz * dz);
+
+                if (ArenaDome.isWallRing(x, z, CENTER_X, CENTER_Z, OUTER_RADIUS)) {
+                    buildShaftColumn(canvas, x, z, dx, dz, distance);
+                } else if (distance < OUTER_RADIUS - 1) {
+                    canvas.set(x, FLOOR_Y - 1, z, Blocks.DEEPSLATE);
+                    buildCaveFloor(canvas, x, z, dx, dz, waterSize);
+                } else {
+                    buildIslandColumn(canvas, x, z, distance);
+                }
+            }
+        }
+
+        decorateIsland(canvas);
+        canvas.set(CENTER_X, TOP_Y, CENTER_Z, Blocks.GOLD_BLOCK);
+    }
+
+    private static void buildShaftColumn(ArenaCanvas canvas, int x, int z, int dx, int dz, double distance) {
+        boolean innerFace = distance < OUTER_RADIUS - 0.1;
+        double angle = Math.toDegrees(Math.atan2(dz, dx));
+        for (int y = FLOOR_Y - 1; y <= RIM_TOP_Y; y++) {
+            if (y >= TOP_Y) {
+                // The well's stone rim sits a block proud of the island's grass.
+                canvas.set(x, y, z, noise(x, y, z, 3) == 0 ? Blocks.MOSSY_STONE_BRICKS : Blocks.STONE_BRICKS);
+                continue;
+            }
+            int depth = TOP_Y - y;
+            if (innerFace && isOnLightSpiral(angle, y)) {
+                canvas.set(x, y, z, lightFor(depth));
+            } else {
+                canvas.set(x, y, z, persistent(rockFor(x, y, z, depth)));
+            }
+        }
+    }
+
+    /** Two opposing spirals, one full turn every 24 blocks of drop. */
+    private static boolean isOnLightSpiral(double angleDegrees, int y) {
+        double spiral = Math.floorMod(y * 15, 360);
+        for (double offset : new double[]{0, 180}) {
+            double diff = Math.abs(((angleDegrees - spiral - offset) % 360 + 540) % 360 - 180);
+            if (diff < 6) return true;
+        }
+        return false;
+    }
+
+    private static Block lightFor(int depth) {
+        return switch (bandFor(depth)) {
+            case 0 -> Blocks.SEA_LANTERN;
+            case 1 -> Blocks.OCHRE_FROGLIGHT;
+            case 2 -> Blocks.PEARLESCENT_FROGLIGHT;
+            default -> Blocks.SHROOMLIGHT;
+        };
+    }
+
+    private static int bandFor(int depth) {
+        if (depth < STONE_DEPTH) return 0;
+        if (depth < TUFF_DEPTH) return 1;
+        if (depth < DEEPSLATE_DEPTH) return 2;
+        return 3;
+    }
+
+    private static Block rockFor(int x, int y, int z, int depth) {
+        // Jitter the band edges so the layers blend instead of meeting in rings.
+        int band = bandFor(depth + noise(x, y, z, 7) - 3);
+        int roll = noise(x * 3, y, z * 3, 100);
+        int patch = noise(Math.floorDiv(x, 2), Math.floorDiv(y, 3), Math.floorDiv(z, 2), 5);
+        return switch (band) {
+            case 0 -> roll < 3 ? Blocks.COAL_ORE
+                    : roll < 5 ? Blocks.IRON_ORE
+                    : patch == 0 ? Blocks.ANDESITE
+                    : patch == 1 ? Blocks.DIORITE
+                    : Blocks.STONE;
+            case 1 -> roll < 4 ? Blocks.COPPER_ORE
+                    : patch == 0 ? Blocks.DRIPSTONE_BLOCK
+                    : patch == 1 ? Blocks.CALCITE
+                    : Blocks.TUFF;
+            case 2 -> roll < 2 ? Blocks.DEEPSLATE_DIAMOND_ORE
+                    : roll < 4 ? Blocks.DEEPSLATE_REDSTONE_ORE
+                    : roll < 6 ? Blocks.DEEPSLATE_LAPIS_ORE
+                    : patch == 0 ? Blocks.AMETHYST_BLOCK
+                    : patch == 1 ? Blocks.COBBLED_DEEPSLATE
+                    : Blocks.DEEPSLATE;
+            // Solid blocks only: leaves in a wall this thin would let the void
+            // show through.
+            default -> patch == 0 ? Blocks.MOSSY_COBBLESTONE
+                    : patch == 1 ? Blocks.ROOTED_DIRT
+                    : Blocks.MOSS_BLOCK;
+        };
+    }
+
+    /** Leaves placed as decoration must be persistent or they decay away. */
+    private static BlockState persistent(Block block) {
+        BlockState state = block.defaultBlockState();
+        return state.hasProperty(LeavesBlock.PERSISTENT) ? state.setValue(LeavesBlock.PERSISTENT, true) : state;
+    }
+
+    private static void buildCaveFloor(ArenaCanvas canvas, int x, int z, int dx, int dz, int waterSize) {
+        int px = dx - WATER_OFFSET_X;
+        int pz = dz - WATER_OFFSET_Z;
+        boolean isWater = px >= 0 && px < waterSize && pz >= 0 && pz < waterSize;
+        boolean isRim = !isWater && px >= -1 && px <= waterSize && pz >= -1 && pz <= waterSize;
+
+        if (isWater) {
+            canvas.set(x, WATER_Y, z, Blocks.WATER);
+            return;
+        }
+        if (isRim) {
+            // Flush with the water, so there is no lip to land on, and bright
+            // enough to read as the target from the top of the shaft.
+            canvas.set(x, FLOOR_Y, z, Blocks.GLOWSTONE);
+            return;
+        }
+
+        int heightRoll = noise(x, 0, z, 29);
+        int rise = heightRoll == 0 ? 3 : heightRoll <= 4 ? 2 : heightRoll <= 13 ? 1 : 0;
+        for (int dy = 0; dy < rise; dy++) {
+            canvas.set(x, FLOOR_Y + dy, z, Blocks.DIRT);
+        }
+        int topY = FLOOR_Y + rise;
+        // Deliberately no blue/cyan tops: from the top of the shaft they were
+        // indistinguishable from the water.
+        int variant = noise(x, 1, z, 10);
+        canvas.set(x, topY, z, variant < 7 ? Blocks.MOSS_BLOCK : variant < 9 ? Blocks.ROOTED_DIRT : Blocks.CLAY);
+
+        int decoration = noise(x, 2, z, 12);
+        if (decoration == 0) {
+            canvas.set(x, topY + 1, z, Blocks.FIREFLY_BUSH);
+        } else if (decoration == 1) {
+            canvas.set(x, topY + 1, z, Blocks.AZALEA);
+        } else if (decoration <= 4) {
+            canvas.set(x, topY + 1, z, Blocks.MOSS_CARPET);
+        }
+    }
+
+    private static void buildIslandColumn(ArenaCanvas canvas, int x, int z, double distance) {
+        if (distance > ISLAND_RADIUS + 0.4) return;
+        canvas.set(x, TOP_Y, z, Blocks.GRASS_BLOCK);
+        canvas.set(x, TOP_Y - 1, z, Blocks.DIRT);
+        // The underside tapers like a floating island.
+        int depth = 2 + (int) Math.round((ISLAND_RADIUS - distance) * 0.9) + noise(x, 0, z, 3);
+        for (int dy = 2; dy <= depth; dy++) {
+            canvas.set(x, TOP_Y - dy, z, dy <= 3 ? Blocks.DIRT : noise(x, dy, z, 4) == 0 ? Blocks.ANDESITE : Blocks.STONE);
+        }
+    }
+
+    private static void decorateIsland(ArenaCanvas canvas) {
+        // Lantern posts at the four compass points around the well.
+        for (int[] dir : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+            int x = CENTER_X + dir[0] * 10;
+            int z = CENTER_Z + dir[1] * 10;
+            canvas.set(x, TOP_Y + 1, z, Blocks.OAK_FENCE);
+            canvas.set(x, TOP_Y + 2, z, Blocks.OAK_FENCE);
+            canvas.set(x, TOP_Y + 3, z, Blocks.LANTERN);
+        }
+
+        // A few leafy bushes (persistent, so they never decay).
+        for (int[] bush : new int[][]{{7, 8}, {-9, -6}, {-4, 11}}) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    int height = (dx == 0 && dz == 0) ? 2 : 1;
+                    for (int dy = 1; dy <= height; dy++) {
+                        canvas.set(CENTER_X + bush[0] + dx, TOP_Y + dy, CENTER_Z + bush[1] + dz,
+                                persistent(Blocks.OAK_LEAVES));
+                    }
+                }
+            }
+        }
+
+        Block[] flowers = {Blocks.SHORT_GRASS, Blocks.SHORT_GRASS, Blocks.POPPY, Blocks.DANDELION,
+                Blocks.CORNFLOWER, Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY};
+        for (int x = CENTER_X - ISLAND_RADIUS; x <= CENTER_X + ISLAND_RADIUS; x++) {
+            for (int z = CENTER_Z - ISLAND_RADIUS; z <= CENTER_Z + ISLAND_RADIUS; z++) {
+                if (!canvas.get(x, TOP_Y, z).is(Blocks.GRASS_BLOCK) || !canvas.isAir(x, TOP_Y + 1, z)) continue;
+                if (noise(x, 5, z, 9) < 4) {
+                    canvas.set(x, TOP_Y + 1, z, flowers[noise(x, 6, z, flowers.length)]);
+                }
+            }
+        }
+    }
+
+    /** Deterministic pseudo-random value in [0, bound) for a block position. */
+    private static int noise(int x, int y, int z, int bound) {
+        long h = x * 73856093L ^ y * 19349663L ^ z * 83492791L;
+        h ^= (h >>> 13);
+        h *= 0x5bd1e995L;
+        h ^= (h >>> 15);
+        return (int) Math.floorMod(h, (long) bound);
+    }
+
+    private static List<ArenaLabel> getLabels() {
+        // In front of the player (who spawns facing -X), above the far rim.
+        double x = CENTER_X - 9.5;
+        double z = CENTER_Z + 0.5;
+        return List.of(
+                new ArenaLabel(x, TOP_Y + 5.2, z, Component.literal("§9§lDROPPER"), 2.5F),
+                new ArenaLabel(x, TOP_Y + 4.2, z, Component.literal("§7Land in the glowing pool!"), 1.2F));
     }
 }
