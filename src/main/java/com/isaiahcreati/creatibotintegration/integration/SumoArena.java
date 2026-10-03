@@ -33,19 +33,36 @@ public class SumoArena {
     private static final int CLEAR_BOTTOM_Y = 49;
     private static final int CLEAR_TOP_Y = 92;
 
+    private int builtRadius = 0;
+
     public BlockPos getStartPosition() {
         return new BlockPos(CENTER_X, FLOOR_Y + 1, CENTER_Z);
     }
 
     public int getRadius() {
+        return builtRadius > 0 ? builtRadius : getConfiguredRadius();
+    }
+
+    private static int getConfiguredRadius() {
         return Config.SUMO_ARENA_RADIUS.get();
     }
+
+    /** True once the arena has been built with the currently configured radius. */
+    public boolean isBuiltForCurrentConfig() {
+        return builtRadius == getConfiguredRadius();
+    }
+
+    /**
+     * Anything that drops this far below the platform has been knocked off.
+     * Checking here, rather than at the water, counts a knock-off as soon as
+     * it's certain instead of after an eight-block fall.
+     */
+    public double getKnockoutY() { return FLOOR_Y - 2; }
 
     public int getWallRadius() {
         return getRadius() + WALL_INNER_RADIUS_OFFSET;
     }
 
-    public int getWaterY() { return WATER_Y; }
 
     public AABB getBounds() {
         return new AABB(
@@ -77,6 +94,7 @@ public class SumoArena {
     }
 
     public void buildArena(ServerLevel level) {
+        builtRadius = getConfiguredRadius();
         CreatiIntegration.LOGGER.info("Building Arena (platform radius {}, wall radius {})...", getRadius(), getWallRadius());
 
         clearFloatingText(level);
@@ -170,11 +188,6 @@ public class SumoArena {
                 Component.literal("\u00A77Knock them off!").withStyle(s -> s.withBold(false)));
 
         CreatiIntegration.LOGGER.info("Arena built!");
-    }
-
-    public void rebuildArena(ServerLevel level) {
-        CreatiIntegration.LOGGER.info("Rebuilding Arena...");
-        buildArena(level);
     }
 
     public void clearMobs(ServerLevel level) {

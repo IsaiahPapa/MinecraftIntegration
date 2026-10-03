@@ -447,12 +447,6 @@ public class Taunts {
             "minecraft:creeper", "minecraft:witch", "minecraft:enderman"
     };
 
-    // Sumo favors mobs that are readable in close quarters and respond well
-    // to knockback. Endermen, creepers, and witches stay out of this mode.
-    private static final String[] SUMO_HOSTILE_TYPES = {
-            "minecraft:zombie", "minecraft:skeleton", "minecraft:spider"
-    };
-
     public static java.util.List<Mob> spawnHostileRing(ServerLevel level, ServerPlayer player,
                                                       double centerX, double centerY, double centerZ,
                                                       int minCount, int maxCount) {
@@ -465,14 +459,6 @@ public class Taunts {
                                                       double baseRadius, double radiusVariance) {
         return spawnHostileRing(level, player, centerX, centerY, centerZ,
                 minCount, maxCount, baseRadius, radiusVariance, HOSTILE_TYPES);
-    }
-
-    public static java.util.List<Mob> spawnSumoHostileRing(ServerLevel level, ServerPlayer player,
-                                                          double centerX, double centerY, double centerZ,
-                                                          int minCount, int maxCount,
-                                                          double baseRadius, double radiusVariance) {
-        return spawnHostileRing(level, player, centerX, centerY, centerZ,
-                minCount, maxCount, baseRadius, radiusVariance, SUMO_HOSTILE_TYPES);
     }
 
     private static java.util.List<Mob> spawnHostileRing(ServerLevel level, ServerPlayer player,

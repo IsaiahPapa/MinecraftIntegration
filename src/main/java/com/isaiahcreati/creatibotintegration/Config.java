@@ -24,6 +24,7 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Integer> DROPPER_WATER_SIZE;
     public static final ModConfigSpec.ConfigValue<Boolean> SUMO_ENABLED;
     public static final ModConfigSpec.ConfigValue<Integer> SUMO_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Integer> SUMO_DURATION_SECONDS;
     public static final ModConfigSpec.ConfigValue<Integer> SUMO_ARENA_RADIUS;
     public static final ModConfigSpec.ConfigValue<Integer> SUMO_MOB_MIN_COUNT;
     public static final ModConfigSpec.ConfigValue<Integer> SUMO_MOB_MAX_COUNT;
@@ -143,6 +144,10 @@ public class Config {
                 .comment("Damage dealt on being knocked off the arena (2 damage = 1 heart)")
                 .defineInRange("sumo.fail_damage", 8, 0, 40);
 
+        SUMO_DURATION_SECONDS = builder
+                .comment("Seconds the player must stay on the platform if they can't clear every mob first")
+                .defineInRange("sumo.duration_seconds", 60, 15, 180);
+
         SUMO_ARENA_RADIUS = builder
                 .comment("Radius of the sumo platform (blocks)")
                 .defineInRange("sumo.arena_radius", 10, 4, 14);
@@ -253,6 +258,7 @@ public class Config {
         DROPPER_WATER_SIZE.set(2);
         SUMO_ENABLED.set(true);
         SUMO_FAIL_DAMAGE.set(8);
+        SUMO_DURATION_SECONDS.set(60);
         SUMO_ARENA_RADIUS.set(10);
         SUMO_MOB_MIN_COUNT.set(2);
         SUMO_MOB_MAX_COUNT.set(3);

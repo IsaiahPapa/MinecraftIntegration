@@ -12,6 +12,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -107,6 +109,21 @@ public class MinigameEventHandler {
         // Ender pearls, wind charges, rockets, tridents, and potions all let a
         // player skip or escape the arena, so held items stay inert here.
         event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public void onLivingDrops(LivingDropsEvent event) {
+        // Arena mobs are props: no loot to carry out of a swapped inventory.
+        if (event.getEntity().entityTags().contains(SumoMinigame.ARENA_MOB_TAG)) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public void onExperienceDrop(LivingExperienceDropEvent event) {
+        if (event.getEntity().entityTags().contains(SumoMinigame.ARENA_MOB_TAG)) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent
