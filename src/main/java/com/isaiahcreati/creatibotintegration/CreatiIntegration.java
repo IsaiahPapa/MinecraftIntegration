@@ -3,6 +3,7 @@ package com.isaiahcreati.creatibotintegration;
 import com.google.gson.*;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.helpers.Chat;
+import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.helpers.Mobs;
 import com.isaiahcreati.creatibotintegration.helpers.OnboardingBook;
 import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
@@ -84,8 +85,8 @@ public class CreatiIntegration {
 
     private void commonSetup(final net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
         if (Config.needsReset()) {
-            LOGGER.info("Config version outdated, resetting to defaults...");
-            Config.resetToDefaults();
+            LOGGER.info("Config version outdated, migrating changed defaults...");
+            Config.migrateToCurrentVersion();
         }
     }
 
@@ -97,6 +98,7 @@ public class CreatiIntegration {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
+        QueueManager.resetForServerStart();
         SafeMode.setServer(event.getServer());
         try {
             String url;
@@ -112,7 +114,7 @@ public class CreatiIntegration {
             socket.on(Socket.EVENT_CONNECT, args -> {
                 reconnectAttempts = 0;
                 LOGGER.info("Connected to SocketIO");
-                if (alertKey != null && !alertKey.isEmpty()) {
+                if (EventHandler.isConfigSetup()) {
                     socket.emit("join", alertKey);
                 }
             });
@@ -144,7 +146,11 @@ public class CreatiIntegration {
             });
 
             socket.on("interaction:minecraft", args -> {
-                try {
+                // Socket.IO callbacks run off-thread. Queue and world state are
+                // owned by the logical server, so process the complete redeem
+                // on the server thread to keep enqueue/dequeue operations safe.
+                event.getServer().execute(() -> {
+                    try {
                     LOGGER.info("Got interaction: " + args.toString());
 
                     if (SafeMode.isActive()) {
@@ -178,7 +184,7 @@ public class CreatiIntegration {
                                 break;
                             case SPAWN:
                                 if (!(payload.details instanceof SpawnDetails spawnDetails)) break;
-                                Mobs.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount, payload.metadata.redeemerName);
+                                Mobs.spawnMobNearPlayer(player, spawnDetails.mobId, spawnDetails.amount, payload.metadata.redeemerName, spawnDetails.modifiers);
                                 EntityType mob = Mobs.getMobByName(spawnDetails.mobId);
                                 Chat.SendAlert(player, "&b" + payload.metadata.redeemerName + "&7 spawned &bx" + spawnDetails.amount + " " + mob.getDescription().getString());
                                 String spawnIcon = ToastIconHelper.getIconForAction("SPAWN", spawnDetails.mobId.contains(":") ? spawnDetails.mobId : "minecraft:" + spawnDetails.mobId);
@@ -207,13 +213,18 @@ public class CreatiIntegration {
                                         PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("TAUNT_INSTANT", tauntId, payload.metadata.redeemerName, "", 0, tauntIcon));
                                     }
                                 }
+                                break;
+                            case BUFF:
+                                if (!(payload.details instanceof BuffDetails buffDetails)) break;
+                                Buffs.handleBuffActivation(player, buffDetails.buffId, buffDetails.duration, payload.metadata.redeemerName);
+                                break;
                         }
                     }
 
-                } catch (JsonSyntaxException e) {
-                    LOGGER.error("Failed process interaction: " + e);
-                    e.printStackTrace();
-                }
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to process interaction", e);
+                    }
+                });
             });
 
             if (Config.AUTO_CONNECT.get() && EventHandler.isConfigSetup()) {
@@ -229,6 +240,7 @@ public class CreatiIntegration {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Server stopping...");
+        QueueManager.resetForServerStop();
         if (socket != null) {
             LOGGER.info("Disconnecting from SocketIO Server...");
             socket.disconnect();

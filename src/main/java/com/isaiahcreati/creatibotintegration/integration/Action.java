@@ -1,7 +1,7 @@
 package com.isaiahcreati.creatibotintegration.integration;
 
 public enum Action {
-    GIVE, TAKE, SPAWN, TAUNT, EFFECT;
+    GIVE, TAKE, SPAWN, TAUNT, EFFECT, BUFF;
 
     // Optional: Method to convert string to enum
     public static Action fromString(String action) throws IllegalArgumentException {

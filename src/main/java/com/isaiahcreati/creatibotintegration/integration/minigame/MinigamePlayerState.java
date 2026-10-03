@@ -13,6 +13,8 @@ public class MinigamePlayerState {
     private final float originalXRot;
     private final ResourceKey<Level> originalDimension;
     private final GameType originalGameMode;
+    private final float originalHealth;
+    private final float originalAbsorption;
     private final long startTick;
 
     public MinigamePlayerState(ServerPlayer player, long startTick) {
@@ -23,6 +25,8 @@ public class MinigamePlayerState {
         this.originalXRot = player.getXRot();
         this.originalDimension = player.level().dimension();
         this.originalGameMode = player.gameMode.getGameModeForPlayer();
+        this.originalHealth = player.getHealth();
+        this.originalAbsorption = player.getAbsorptionAmount();
         this.startTick = startTick;
     }
 
@@ -33,5 +37,7 @@ public class MinigamePlayerState {
     public float getOriginalXRot() { return originalXRot; }
     public ResourceKey<Level> getOriginalDimension() { return originalDimension; }
     public GameType getOriginalGameMode() { return originalGameMode; }
+    public float getOriginalHealth() { return originalHealth; }
+    public float getOriginalAbsorption() { return originalAbsorption; }
     public long getStartTick() { return startTick; }
 }

@@ -16,6 +16,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -27,8 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TntRunMinigame extends Minigame {
 
-    /** Tracks a scheduled block removal with its start and removal ticks. */
-    private record DecayEntry(long startTick, long removalTick) {}
+    /** Tracks a scheduled removal and whether it is a visible random pothole. */
+    private record DecayEntry(long startTick, long removalTick, boolean showCracks) {}
 
     private final TntRunArena arena = new TntRunArena();
     private final Map<BlockPos, DecayEntry> blocksToRemove = new ConcurrentHashMap<>();
@@ -41,8 +42,14 @@ public class TntRunMinigame extends Minigame {
     // Passive decay: every PASSIVE_DECAY_INTERVAL_TICKS, a random block on the
     // player's current floor is scheduled for removal. This manufactures the
     // potholes/obstacles that a multi-player TNT Run would naturally create.
-    private static final int PASSIVE_DECAY_INTERVAL_TICKS = 16;
-    private static final int PASSIVE_DECAY_DELAY_TICKS = 12;
+    private static final int PASSIVE_DECAY_INTERVAL_TICKS = 20;
+
+    private static int getCrackAnimationId(BlockPos pos) {
+        // Clients key crack overlays by breaker ID. A stable negative ID per
+        // block allows several potholes to animate at the same time without
+        // replacing one another's overlay.
+        return -1 - (pos.hashCode() & Integer.MAX_VALUE);
+    }
 
     private int getClosestFloorY(ServerPlayer player) {
         int playerY = (int) Math.floor(player.getY());
@@ -131,6 +138,11 @@ public class TntRunMinigame extends Minigame {
     @Override
     public void resetArena(ServerLevel level) {
         CreatiIntegration.LOGGER.info("Resetting TNT Run arena for rebuild...");
+        for (Map.Entry<BlockPos, DecayEntry> entry : blocksToRemove.entrySet()) {
+            if (entry.getValue().showCracks()) {
+                level.destroyBlockProgress(getCrackAnimationId(entry.getKey()), entry.getKey(), -1);
+            }
+        }
         blocksToRemove.clear();
         activatedBlocks.clear();
     }
@@ -167,7 +179,7 @@ public class TntRunMinigame extends Minigame {
             if (!level.getBlockState(checkPos).isAir() && !activatedBlocks.contains(checkPos)) {
                 activatedBlocks.add(checkPos);
                 int decayDelay = Config.TNT_RUN_DECAY_DELAY_TICKS.get();
-                blocksToRemove.put(checkPos, new DecayEntry(currentTick, currentTick + decayDelay));
+                blocksToRemove.put(checkPos, new DecayEntry(currentTick, currentTick + decayDelay, false));
             }
         }
 
@@ -190,7 +202,9 @@ public class TntRunMinigame extends Minigame {
                 BlockPos checkPos = new BlockPos(rx, playerFloorY, rz);
                 if (!level.getBlockState(checkPos).isAir() && !activatedBlocks.contains(checkPos)) {
                     activatedBlocks.add(checkPos);
-                    blocksToRemove.put(checkPos, new DecayEntry(currentTick, currentTick + PASSIVE_DECAY_DELAY_TICKS));
+                    int warningTicks = Config.TNT_RUN_POTHOLE_WARNING_TICKS.get();
+                    blocksToRemove.put(checkPos, new DecayEntry(
+                            currentTick, currentTick + warningTicks, true));
                     break;
                 }
             }
@@ -211,15 +225,17 @@ public class TntRunMinigame extends Minigame {
                 if (!state.isAir()) {
                     level.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 0.5F, 1.0F);
                     level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
-                    level.destroyBlockProgress(-1, pos, -1);
+                }
+                if (decay.showCracks()) {
+                    level.destroyBlockProgress(getCrackAnimationId(pos), pos, -1);
                 }
                 it.remove();
                 activatedBlocks.remove(pos);
-            } else {
+            } else if (decay.showCracks()) {
                 long total = decay.removalTick() - decay.startTick();
                 long elapsed = currentTick - decay.startTick();
                 int stage = total > 0 ? (int) Math.min(9, Math.max(0, (elapsed * 10L) / total)) : 0;
-                level.destroyBlockProgress(-1, pos, stage);
+                level.destroyBlockProgress(getCrackAnimationId(pos), pos, stage);
             }
         }
     }
@@ -227,6 +243,11 @@ public class TntRunMinigame extends Minigame {
     @Override
     public void onPlayerFall(ServerPlayer player) {
         exitPlayer(player, false);
+    }
+
+    @Override
+    protected AABB getArenaBounds() {
+        return arena.getBounds();
     }
 
     @Override

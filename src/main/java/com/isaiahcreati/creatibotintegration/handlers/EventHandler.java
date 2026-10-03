@@ -26,7 +26,7 @@ public class EventHandler {
         if (!(event.getEntity() instanceof Player player)) return;
         if (!event.getLevel().isClientSide()) return;
         if (isConfigSetup()) {
-            Component message = Component.literal("[Creati's Integration] Welcome! Start receiving alerts with /start & /stop")
+            Component message = Component.literal("[Creati's Integration] Welcome! Use /creati connect to start receiving alerts and /creati disconnect to stop.")
                     .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF").getOrThrow()));
             player.sendSystemMessage(message);
         }

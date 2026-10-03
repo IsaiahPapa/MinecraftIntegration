@@ -4,8 +4,10 @@ import com.isaiahcreati.creatibotintegration.Config;
 import com.isaiahcreati.creatibotintegration.CreatiIntegration;
 import com.isaiahcreati.creatibotintegration.handlers.EventHandler;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
+import com.isaiahcreati.creatibotintegration.integration.MobModifier;
 import com.isaiahcreati.creatibotintegration.integration.Taunt;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
+import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.helpers.SafeMode;
 import com.isaiahcreati.creatibotintegration.network.PacketHandler;
 import com.isaiahcreati.creatibotintegration.network.ClientboundActivityNotificationPacket;
@@ -83,13 +85,8 @@ public class ModCommands {
                                 Chat.SendMessage(player, "You must configure the Mod's settings before connecting.");
                                 return 0;
                             }
-                            String ALERT_KEY = Config.ALERT_KEY.get();
                             Chat.SendMessage(player, "Starting game session...");
                             socket.connect();
-                            socket.on(Socket.EVENT_CONNECT, args -> {
-                                socket.emit("join", ALERT_KEY);
-                                LOGGER.info("Connected to SocketIO");
-                            });
                             return 1;
                         })
                 )
@@ -112,6 +109,7 @@ public class ModCommands {
                                 .executes(context -> {
                                     ServerPlayer player = context.getSource().getPlayerOrException();
                                     SafeMode.enable(context.getSource().getServer(), 30);
+                                    QueueManager.broadcastQueueUpdate();
                                     Chat.SendMessage(player, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77enabled for \u00a7d30s\u00a77. Redeems are paused.");
                                     return 1;
                                 })
@@ -120,6 +118,7 @@ public class ModCommands {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
                                             int seconds = IntegerArgumentType.getInteger(context, "seconds");
                                             SafeMode.enable(context.getSource().getServer(), seconds);
+                                            QueueManager.broadcastQueueUpdate();
                                             Chat.SendMessage(player, "\u00a7d\u00a7l\u2696 Safe Mode \u00a7r\u00a77enabled for \u00a7d" + seconds + "s\u00a77. Redeems are paused.");
                                             return 1;
                                         })
@@ -133,6 +132,7 @@ public class ModCommands {
                                         return 0;
                                     }
                                     SafeMode.disable();
+                                    QueueManager.broadcastQueueUpdate();
                                     Chat.SendMessage(player, "\u00a7a\u00a7l\u2714 Safe Mode \u00a7r\u00a77disabled. Redeems are live again.");
                                     return 1;
                                 })
@@ -194,6 +194,10 @@ public class ModCommands {
                                     player.sendSystemMessage(Component.literal("\u00a7bMinigame queue: \u00a7f" + QueueManager.getMinigameQueueSize()));
                                     player.sendSystemMessage(Component.literal("\u00a7bEffect queue: \u00a7f" + QueueManager.getVisualEffectQueueSize()));
                                     player.sendSystemMessage(Component.literal("\u00a7bPending taunts: \u00a7f" + QueueManager.getPendingTauntsSize()));
+                                    int pendingBuffs = Buffs.getPendingBuffsSize();
+                                    if (pendingBuffs > 0) {
+                                        player.sendSystemMessage(Component.literal("\u00a7dPending buffs: \u00a7f" + pendingBuffs));
+                                    }
                                     return 1;
                                 })
                         )
@@ -266,13 +270,30 @@ public class ModCommands {
                                             if (parts.length > 1) {
                                                 try { amount = Integer.parseInt(parts[1]); } catch (NumberFormatException e) { amount = 1; }
                                             }
-                                            Mobs.spawnMobNearPlayer(player, actualMobId, amount, "");
+                                            java.util.List<MobModifier> modifiers = null;
+                                            for (String part : parts) {
+                                                if (part.startsWith("{")) {
+                                                    try {
+                                                        com.google.gson.Gson gson = new com.google.gson.Gson();
+                                                        MobModifier[] mods = gson.fromJson(part, MobModifier[].class);
+                                                        modifiers = java.util.Arrays.asList(mods);
+                                                    } catch (Exception e) {
+                                                        Chat.SendAlert(player, "&cInvalid modifiers JSON: " + e.getMessage());
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                            Mobs.spawnMobNearPlayer(player, actualMobId, amount, "", modifiers);
+                                            if (modifiers != null) {
+                                                Chat.SendAlert(player, "&7Spawned &bx" + amount + " &7with &b" + modifiers.size() + " modifiers");
+                                            } else {
+                                                Chat.SendAlert(player, "&7Spawned &bx" + amount);
+                                            }
                                             String mobName = actualMobId;
                                             var entityType = net.minecraft.world.entity.EntityType.byString(actualMobId);
                                             if (entityType.isPresent()) {
                                                 mobName = entityType.get().getDescription().getString();
                                             }
-                                            Chat.SendAlert(player, "&7Spawned &bx" + amount + " " + mobName);
                                             String icon = ToastIconHelper.getIconForAction("SPAWN", actualMobId.contains(":") ? actualMobId : "minecraft:" + actualMobId);
                                             PacketHandler.sendToPlayer(player, new ClientboundActivityNotificationPacket("SPAWN", "", "Test", amount + "x " + mobName, 0, icon));
                                             return 1;
@@ -311,7 +332,8 @@ public class ModCommands {
                                         })
                                 )
                         )
-                        // /creati test minigame <parkour|tntrun|dropper> <start|leave|forceexit>
+                        // /creati test minigame <parkour|tntrun|dropper|sumo> <start|leave|forceexit>
+                        // /creati test minigame parkour version <1|2|3>
                         .then(Commands.literal("minigame")
                                 .then(Commands.literal("parkour")
                                         .then(Commands.literal("start")
@@ -346,6 +368,19 @@ public class ModCommands {
                                                     CreatiIntegration.getParkourMinigame().handlePlayerReconnect(player);
                                                     return 1;
                                                 })
+                                        )
+                                        .then(Commands.literal("version")
+                                                .then(Commands.argument("version", IntegerArgumentType.integer(1, 3))
+                                                        .executes(context -> {
+                                                            int version = IntegerArgumentType.getInteger(context, "version");
+                                                            Config.PARKOUR_ARENA_VERSION.set(version);
+                                                            Config.CLIENT_CONFIG.save();
+                                                            context.getSource().sendSuccess(() -> Component.literal(
+                                                                    "Parkour arena set to version " + version
+                                                                            + ". It will rebuild on the next entry."), false);
+                                                            return 1;
+                                                        })
+                                                )
                                         )
                                 )
                                 .then(Commands.literal("tntrun")
@@ -438,6 +473,35 @@ public class ModCommands {
                                                         return 0;
                                                     }
                                                     CreatiIntegration.getSumoMinigame().handlePlayerReconnect(player);
+                                                    return 1;
+                                                })
+                                        )
+                                )
+                        )
+                        // /creati test buff <buffId> [duration]
+                        .then(Commands.literal("buff")
+                                .then(Commands.argument("buffId", StringArgumentType.word())
+                                        .suggests((context, builder) -> {
+                                            builder.suggest("glass_cannon");
+                                            builder.suggest("frostbite");
+                                            builder.suggest("double_health");
+                                            builder.suggest("explosive_spawns");
+                                            builder.suggest("fire_mobs");
+                                            builder.suggest("invisible_mobs");
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            String buffId = StringArgumentType.getString(context, "buffId");
+                                            Buffs.handleBuffActivation(player, buffId, 15, "Test");
+                                            return 1;
+                                        })
+                                        .then(Commands.argument("duration", IntegerArgumentType.integer(1, 3600))
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    String buffId = StringArgumentType.getString(context, "buffId");
+                                                    int duration = IntegerArgumentType.getInteger(context, "duration");
+                                                    Buffs.handleBuffActivation(player, buffId, duration, "Test");
                                                     return 1;
                                                 })
                                         )
@@ -539,6 +603,8 @@ public class ModCommands {
         player.sendSystemMessage(Component.literal("\u00a77/creati test spawn \u00a7f<mobId> [amount]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test potion \u00a7f<effectId> [duration] [amplifier]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test minigame \u00a7f<parkour|tntrun|dropper|sumo> <start|leave|forceexit>"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test minigame parkour version \u00a7f<1|2|3>"));
+        player.sendSystemMessage(Component.literal("\u00a77/creati test buff \u00a7f<buffId> [duration]"));
         player.sendSystemMessage(Component.literal("\u00a77/creati test notify \u00a7f<type> [name] [redeemer] [position]"));
         player.sendSystemMessage(Component.literal("\u00A78\u00A7m-------------------------------"));
     }

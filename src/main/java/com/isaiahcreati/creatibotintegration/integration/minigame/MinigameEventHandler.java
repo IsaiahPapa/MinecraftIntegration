@@ -1,10 +1,12 @@
 package com.isaiahcreati.creatibotintegration.integration.minigame;
 
-import com.isaiahcreati.creatibotintegration.Config;
+import com.isaiahcreati.creatibotintegration.helpers.Buffs;
 import com.isaiahcreati.creatibotintegration.integration.QueueManager;
 import com.isaiahcreati.creatibotintegration.integration.Taunts;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.GameType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -50,9 +52,8 @@ public class MinigameEventHandler {
         Taunts.tickHotPotatoes();
         Taunts.tickLuckyBlocks();
         Taunts.tickGremlins();
-        if (Config.QUEUE_ENABLED.get()) {
-            QueueManager.tick(event);
-        }
+        Buffs.tick(event);
+        QueueManager.tick(event);
     }
 
     @SubscribeEvent
@@ -87,6 +88,9 @@ public class MinigameEventHandler {
 
         if (sourceEntity != null) {
             Taunts.onPlayerHurtByGremlin(player, sourceEntity);
+            if (Buffs.isFrostbiteMob(sourceEntity)) {
+                player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 1));
+            }
         }
     }
 
@@ -119,6 +123,10 @@ public class MinigameEventHandler {
     @SubscribeEvent
     public void onPlayerConnect(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        // Always send a complete snapshot, including the empty state, so a
+        // client can never carry sidebar data over from another world.
+        QueueManager.sendQueueUpdate(player);
 
         UUID uuid = player.getUUID();
         boolean wasInMinigame = false;

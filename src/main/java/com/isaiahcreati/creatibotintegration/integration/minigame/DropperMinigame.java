@@ -11,6 +11,7 @@ import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 
 public class DropperMinigame extends Minigame {
 
@@ -64,21 +65,18 @@ public class DropperMinigame extends Minigame {
 
     @Override
     public boolean checkWin(ServerPlayer player) {
-        // The only water in the arena is the landing pad, so standing in water
-        // at the bottom of the shaft means a successful landing.
-        return player.level().getBlockState(player.blockPosition()).is(Blocks.WATER);
+        return isTouchingWaterTarget(player);
     }
 
     @Override
     public boolean checkLose(ServerPlayer player) {
-        if (player.getY() > arena.getFloorY() + 2) return false;
+        if (player.getY() > arena.getMaxTerrainY() + 2) return false;
+        if (isTouchingWaterTarget(player)) return false;
 
-        BlockPos standingOn = player.getOnPos();
-        if (standingOn.getY() == arena.getFloorY()) {
-            return !player.level().getBlockState(player.blockPosition()).is(Blocks.WATER);
-        }
-
-        return false;
+        // The landing environment is intentionally uneven, so failure is
+        // based on contacting any solid terrain rather than one fixed floor Y.
+        return !player.level().getBlockState(player.getOnPos()).isAir()
+                && !player.level().getBlockState(player.getOnPos()).is(Blocks.WATER);
     }
 
     @Override
@@ -87,6 +85,15 @@ public class DropperMinigame extends Minigame {
     @Override
     public void onPlayerFall(ServerPlayer player) {
         exitPlayer(player, false);
+    }
+
+    @Override
+    protected AABB getArenaBounds() {
+        return arena.getBounds();
+    }
+
+    private boolean isTouchingWaterTarget(ServerPlayer player) {
+        return player.getBoundingBox().intersects(arena.getWaterTargetBounds());
     }
 
     @Override

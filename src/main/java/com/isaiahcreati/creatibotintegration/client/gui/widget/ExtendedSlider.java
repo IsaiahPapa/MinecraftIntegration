@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-only
  */
 
-package net.neoforged.neoforge.client.gui.widget;
+package com.isaiahcreati.creatibotintegration.client.gui.widget;
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import java.text.DecimalFormat;

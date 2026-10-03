@@ -31,6 +31,10 @@ configurations {
 dependencies {
     implementation files('libs/yet_another_config_lib_v3-3.9.4+26.1-neoforge.jar')
 
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     jarJar(implementation('io.socket:socket.io-client:2.1.0')) {
         version {
             strictly '[2.1.0,3.0.0)'
@@ -161,4 +165,8 @@ clean.dependsOn "deleteCustomDirs"
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }

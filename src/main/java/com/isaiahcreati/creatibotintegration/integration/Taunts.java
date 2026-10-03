@@ -181,7 +181,6 @@ public class Taunts {
     }
 
     public static void webBlockPlayer(ServerPlayer player){
-        player.getOnPos();
         player.level().setBlock(player.getOnPos().above(), Blocks.COBWEB.defaultBlockState(), Block.UPDATE_ALL);
     }
 
@@ -443,12 +442,15 @@ public class Taunts {
         player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_BREAK.value(), SoundSource.HOSTILE, 1.0F, 1.0F);
     }
 
-    public static void randomizeMovementTemporarily(ServerPlayer player){
-    }
-
     public static final String[] HOSTILE_TYPES = {
             "minecraft:zombie", "minecraft:skeleton", "minecraft:spider",
             "minecraft:creeper", "minecraft:witch", "minecraft:enderman"
+    };
+
+    // Sumo favors mobs that are readable in close quarters and respond well
+    // to knockback. Endermen, creepers, and witches stay out of this mode.
+    private static final String[] SUMO_HOSTILE_TYPES = {
+            "minecraft:zombie", "minecraft:skeleton", "minecraft:spider"
     };
 
     public static java.util.List<Mob> spawnHostileRing(ServerLevel level, ServerPlayer player,
@@ -461,8 +463,25 @@ public class Taunts {
                                                       double centerX, double centerY, double centerZ,
                                                       int minCount, int maxCount,
                                                       double baseRadius, double radiusVariance) {
+        return spawnHostileRing(level, player, centerX, centerY, centerZ,
+                minCount, maxCount, baseRadius, radiusVariance, HOSTILE_TYPES);
+    }
+
+    public static java.util.List<Mob> spawnSumoHostileRing(ServerLevel level, ServerPlayer player,
+                                                          double centerX, double centerY, double centerZ,
+                                                          int minCount, int maxCount,
+                                                          double baseRadius, double radiusVariance) {
+        return spawnHostileRing(level, player, centerX, centerY, centerZ,
+                minCount, maxCount, baseRadius, radiusVariance, SUMO_HOSTILE_TYPES);
+    }
+
+    private static java.util.List<Mob> spawnHostileRing(ServerLevel level, ServerPlayer player,
+                                                        double centerX, double centerY, double centerZ,
+                                                        int minCount, int maxCount,
+                                                        double baseRadius, double radiusVariance,
+                                                        String[] hostileTypes) {
         java.util.List<Mob> spawned = new java.util.ArrayList<>();
-        String chosen = HOSTILE_TYPES[rand.nextInt(HOSTILE_TYPES.length)];
+        String chosen = hostileTypes[rand.nextInt(hostileTypes.length)];
         EntityType<?> type = Utils.getEntityTypeByName(chosen);
         if (type == null) return spawned;
 

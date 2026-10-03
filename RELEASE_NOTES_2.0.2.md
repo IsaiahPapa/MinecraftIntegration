@@ -10,7 +10,6 @@ The biggest update yet — a full rewrite on NeoForge 26.1, plus a curated vanil
 
 ## New Taunts
 
-- **mob_army** — 8–15 aggro hostile mobs in a ring around you (endermen actually target you now).
 - **anvil_rain** — six staggered anvils over 80 ticks.
 - **blind_noise** — blindness + scattered creeper-prime jumpscares.
 - **rename_chat** — temporarily overrides your chat name for 60s.

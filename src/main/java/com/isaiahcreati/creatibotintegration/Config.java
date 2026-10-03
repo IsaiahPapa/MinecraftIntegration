@@ -10,10 +10,12 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<Boolean> PARKOUR_ENABLED;
     public static final ModConfigSpec.ConfigValue<Integer> PARKOUR_DURATION_SECONDS;
     public static final ModConfigSpec.ConfigValue<Integer> PARKOUR_FAIL_DAMAGE;
+    public static final ModConfigSpec.ConfigValue<Integer> PARKOUR_ARENA_VERSION;
     public static final ModConfigSpec.ConfigValue<Boolean> TNT_RUN_ENABLED;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_DURATION_SECONDS;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_FAIL_DAMAGE;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_DECAY_DELAY_TICKS;
+    public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_POTHOLE_WARNING_TICKS;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_GRACE_PERIOD_SECONDS;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_FLOOR_SIZE;
     public static final ModConfigSpec.ConfigValue<Integer> TNT_RUN_FLOOR_COUNT;
@@ -37,7 +39,7 @@ public class Config {
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final String CATEGORY_QUEUE = "Queue";
-    public static final int CURRENT_CONFIG_VERSION = 11;
+    public static final int CURRENT_CONFIG_VERSION = 15;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -66,12 +68,16 @@ public class Config {
                 .define("parkour.enabled", true);
 
         PARKOUR_DURATION_SECONDS = builder
-                .comment("Time limit in seconds to complete the parkour course")
+                .comment("Time limit for parkour V1/V2; Prism Relay V3 uses 30 seconds")
                 .defineInRange("parkour.duration_seconds", 25, 5, 120);
 
         PARKOUR_FAIL_DAMAGE = builder
                 .comment("Damage dealt on failing to complete the parkour course (2 damage = 1 heart)")
                 .defineInRange("parkour.fail_damage", 8, 0, 40);
+
+        PARKOUR_ARENA_VERSION = builder
+                .comment("Parkour arena layout: 1 = legacy, 2 = Foundry Sprint, 3 = Prism Relay")
+                .defineInRange("parkour.arena_version", 3, 1, 3);
 
         builder.pop();
 
@@ -93,13 +99,17 @@ public class Config {
                 .comment("Delay in ticks before a stepped-on block disappears (20 ticks = 1 second)")
                 .defineInRange("tntrun.decay_delay_ticks", 8, 2, 100);
 
+        TNT_RUN_POTHOLE_WARNING_TICKS = builder
+                .comment("How long a random pothole shows progressive cracks before opening")
+                .defineInRange("tntrun.pothole_warning_ticks", 30, 10, 100);
+
         TNT_RUN_GRACE_PERIOD_SECONDS = builder
                 .comment("Grace period in seconds before blocks start decaying (countdown: 3, 2, 1, GO!)")
                 .defineInRange("tntrun.grace_period_seconds", 3, 0, 10);
 
         TNT_RUN_FLOOR_SIZE = builder
-                .comment("Size of each TNT Run floor (e.g. 16 = 16x16). Smaller = harder.")
-                .defineInRange("tntrun.floor_size", 16, 8, 32);
+                .comment("Approximate diameter of each TNT Run floor. Smaller = harder.")
+                .defineInRange("tntrun.floor_size", 20, 8, 32);
 
         TNT_RUN_FLOOR_COUNT = builder
                 .comment("Number of stacked floors (1-3). Fewer = harder.")
@@ -135,15 +145,15 @@ public class Config {
 
         SUMO_ARENA_RADIUS = builder
                 .comment("Radius of the sumo platform (blocks)")
-                .defineInRange("sumo.arena_radius", 8, 4, 12);
+                .defineInRange("sumo.arena_radius", 10, 4, 14);
 
         SUMO_MOB_MIN_COUNT = builder
                 .comment("Minimum number of mobs spawned in the arena ring")
-                .defineInRange("sumo.mob_min_count", 3, 1, 30);
+                .defineInRange("sumo.mob_min_count", 2, 1, 3);
 
         SUMO_MOB_MAX_COUNT = builder
                 .comment("Maximum number of mobs spawned in the arena ring")
-                .defineInRange("sumo.mob_max_count", 5, 1, 40);
+                .defineInRange("sumo.mob_max_count", 3, 1, 3);
 
         builder.pop();
 
@@ -190,25 +200,55 @@ public class Config {
         return CONFIG_VERSION.get() < CURRENT_CONFIG_VERSION;
     }
 
+    /** Upgrades changed defaults without overwriting unrelated user settings. */
+    public static void migrateToCurrentVersion() {
+        int previousVersion = CONFIG_VERSION.get();
+        if (previousVersion < 12) {
+            if (TNT_RUN_FLOOR_SIZE.get() == 16) {
+                TNT_RUN_FLOOR_SIZE.set(20);
+            }
+        }
+        if (previousVersion < 13) {
+            // Version 12 temporarily used the warning duration for both decay
+            // types. Restore fast stepped-block decay and keep slow warnings
+            // on randomly generated potholes only.
+            if (TNT_RUN_DECAY_DELAY_TICKS.get() == 30) {
+                TNT_RUN_DECAY_DELAY_TICKS.set(8);
+            }
+            if (SUMO_ARENA_RADIUS.get() == 8) {
+                SUMO_ARENA_RADIUS.set(10);
+            }
+            if (SUMO_MOB_MIN_COUNT.get() == 3) {
+                SUMO_MOB_MIN_COUNT.set(2);
+            }
+            if (SUMO_MOB_MAX_COUNT.get() == 5) {
+                SUMO_MOB_MAX_COUNT.set(3);
+            }
+        }
+        CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
+    }
+
     public static void resetToDefaults() {
         TNT_RUN_DECAY_DELAY_TICKS.set(8);
+        TNT_RUN_POTHOLE_WARNING_TICKS.set(30);
         TNT_RUN_GRACE_PERIOD_SECONDS.set(3);
         TNT_RUN_DURATION_SECONDS.set(30);
         TNT_RUN_FAIL_DAMAGE.set(8);
         TNT_RUN_ENABLED.set(true);
-        TNT_RUN_FLOOR_SIZE.set(16);
+        TNT_RUN_FLOOR_SIZE.set(20);
         TNT_RUN_FLOOR_COUNT.set(2);
         PARKOUR_ENABLED.set(true);
         PARKOUR_DURATION_SECONDS.set(25);
         PARKOUR_FAIL_DAMAGE.set(8);
+        PARKOUR_ARENA_VERSION.set(3);
         DROPPER_ENABLED.set(true);
         DROPPER_FAIL_DAMAGE.set(8);
         DROPPER_WATER_SIZE.set(2);
         SUMO_ENABLED.set(true);
         SUMO_FAIL_DAMAGE.set(8);
-        SUMO_ARENA_RADIUS.set(8);
-        SUMO_MOB_MIN_COUNT.set(3);
-        SUMO_MOB_MAX_COUNT.set(5);
+        SUMO_ARENA_RADIUS.set(10);
+        SUMO_MOB_MIN_COUNT.set(2);
+        SUMO_MOB_MAX_COUNT.set(3);
         QUEUE_ENABLED.set(true);
         SIDEBAR_VISIBLE.set(true);
         ACTIVITY_FEED_VISIBLE.set(true);

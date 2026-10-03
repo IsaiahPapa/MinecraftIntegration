@@ -38,6 +38,9 @@ public class PayloadDeserializer implements JsonDeserializer<Payload> {
                     payload.details = context.deserialize(jsonObject.get("details"), TauntDetails.class);
                 }
                 break;
+            case "buff":
+                payload.details = context.deserialize(jsonObject.get("details"), BuffDetails.class);
+                break;
             // Add cases for other action types
         }
 

@@ -8,40 +8,84 @@ import java.util.List;
 
 public class ClientQueueState {
 
-    public static List<ClientboundQueueUpdatePacket.QueueEntry> minigameQueue = Collections.emptyList();
-    public static List<ClientboundQueueUpdatePacket.QueueEntry> visualEffectQueue = Collections.emptyList();
+    public static List<QueueViewModel.Entry> minigameQueue = Collections.emptyList();
+    public static List<QueueViewModel.Entry> visualEffectQueue = Collections.emptyList();
+    public static List<QueueViewModel.Entry> pendingTaunts = Collections.emptyList();
+    public static List<QueueViewModel.Entry> pendingBuffs = Collections.emptyList();
 
     public static String activeMinigameId = "";
     public static String activeMinigameRedeemer = "";
     public static String activeVisualEffectId = "";
     public static String activeVisualEffectRedeemer = "";
+    public static String pausedVisualEffectId = "";
+    public static String pausedVisualEffectRedeemer = "";
     public static int activeVisualEffectRemainingSeconds = 0;
     public static int activeVisualEffectDurationSeconds = 0;
     public static int pausedEffectRemainingSeconds = 0;
-    public static int pendingTauntsCount = 0;
     public static int safeModeRemainingSeconds = 0;
 
     public static void updateFromPacket(ClientboundQueueUpdatePacket packet) {
-        minigameQueue = new ArrayList<>(packet.minigameQueue());
-        visualEffectQueue = new ArrayList<>(packet.visualEffectQueue());
+        minigameQueue = mapEntries(packet.minigameQueue());
+        visualEffectQueue = mapEntries(packet.visualEffectQueue());
+        pendingTaunts = mapEntries(packet.pendingTaunts());
+        pendingBuffs = mapEntries(packet.pendingBuffs());
         activeMinigameId = packet.activeMinigameId();
         activeMinigameRedeemer = packet.activeMinigameRedeemer();
         activeVisualEffectId = packet.activeVisualEffectId();
         activeVisualEffectRedeemer = packet.activeVisualEffectRedeemer();
+        pausedVisualEffectId = packet.pausedVisualEffectId();
+        pausedVisualEffectRedeemer = packet.pausedVisualEffectRedeemer();
         activeVisualEffectRemainingSeconds = packet.activeVisualEffectRemainingSeconds();
         activeVisualEffectDurationSeconds = packet.activeVisualEffectDurationSeconds();
         pausedEffectRemainingSeconds = packet.pausedEffectRemainingSeconds();
-        pendingTauntsCount = packet.pendingTauntsCount();
         safeModeRemainingSeconds = packet.safeModeRemainingSeconds();
+    }
+
+    public static void reset() {
+        minigameQueue = Collections.emptyList();
+        visualEffectQueue = Collections.emptyList();
+        pendingTaunts = Collections.emptyList();
+        pendingBuffs = Collections.emptyList();
+        activeMinigameId = "";
+        activeMinigameRedeemer = "";
+        activeVisualEffectId = "";
+        activeVisualEffectRedeemer = "";
+        pausedVisualEffectId = "";
+        pausedVisualEffectRedeemer = "";
+        activeVisualEffectRemainingSeconds = 0;
+        activeVisualEffectDurationSeconds = 0;
+        pausedEffectRemainingSeconds = 0;
+        safeModeRemainingSeconds = 0;
     }
 
     public static boolean hasAnythingQueued() {
         return !minigameQueue.isEmpty()
                 || !visualEffectQueue.isEmpty()
+                || !pendingTaunts.isEmpty()
+                || !pendingBuffs.isEmpty()
                 || !activeMinigameId.isEmpty()
                 || !activeVisualEffectId.isEmpty()
-                || pausedEffectRemainingSeconds > 0
-                || pendingTauntsCount > 0;
+                || !pausedVisualEffectId.isEmpty()
+                || pausedEffectRemainingSeconds > 0;
+    }
+
+    public static int getTotalQueueSize() {
+        return QueueViewModel.totalSize(minigameQueue, visualEffectQueue, pendingTaunts, pendingBuffs);
+    }
+
+    public static List<QueueViewModel.DisplayEntry> getVisibleQueueEntries(int limit) {
+        return QueueViewModel.visibleEntries(
+                limit, minigameQueue, visualEffectQueue, pendingTaunts, pendingBuffs);
+    }
+
+    private static List<QueueViewModel.Entry> mapEntries(
+            List<ClientboundQueueUpdatePacket.QueueEntry> packetEntries) {
+        List<QueueViewModel.Entry> entries = new ArrayList<>(packetEntries.size());
+        for (ClientboundQueueUpdatePacket.QueueEntry entry : packetEntries) {
+            entries.add(new QueueViewModel.Entry(
+                    entry.tauntId(), entry.displayName(), entry.redeemerName(), entry.durationSeconds()));
+        }
+        return entries;
     }
 
     public static String getDisplayName(String tauntId) {
@@ -101,6 +145,12 @@ public class ClientQueueState {
             case "rename_chat" -> "Rename the Streamer";
             case "hot_potato" -> "Hot Potato";
             case "lucky_block" -> "Lucky Block";
+            case "glass_cannon" -> "Glass Cannon";
+            case "frostbite" -> "Frostbite";
+            case "double_health" -> "Double Health";
+            case "explosive_spawns" -> "Explosive Spawns";
+            case "fire_mobs" -> "Fire Mobs";
+            case "invisible_mobs" -> "Invisible Mobs";
             default -> tauntId;
         };
     }

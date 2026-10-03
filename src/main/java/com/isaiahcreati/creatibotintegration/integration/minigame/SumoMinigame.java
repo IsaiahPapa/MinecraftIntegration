@@ -18,6 +18,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -77,6 +78,8 @@ public class SumoMinigame extends Minigame {
     @Override
     public void buildArena(ServerLevel level) {
         CreatiIntegration.LOGGER.info("Building Arena course...");
+        clearArenaMobs();
+        arena.clearMobs(level);
         arena.buildArena(level);
     }
 
@@ -151,6 +154,11 @@ public class SumoMinigame extends Minigame {
     }
 
     @Override
+    protected AABB getArenaBounds() {
+        return arena.getBounds();
+    }
+
+    @Override
     protected void onExit(ServerPlayer player, boolean success) {
         if (success) {
             Chat.SendAlert(player, "&aYou cleared the Arena!");
@@ -172,6 +180,11 @@ public class SumoMinigame extends Minigame {
         ServerLevel minigameLevel = MinigameDimension.getMinigameLevel(player);
         if (minigameLevel == null) return;
 
+        // Purge untracked mobs left by a disconnect, restart, or interrupted
+        // session before creating exactly one new wave.
+        clearArenaMobs();
+        arena.clearMobs(minigameLevel);
+
         // Snapshot the player's inventory, then clear it and give a kit.
         saveInventory(player);
         clearInventory(player);
@@ -180,10 +193,10 @@ public class SumoMinigame extends Minigame {
         // Spawn the mob ring on the platform edge. Mobs are frozen during the
         // grace period via onGracePeriodCountdown.
         BlockPos start = getStartPos();
-        int min = Config.SUMO_MOB_MIN_COUNT.get();
-        int max = Config.SUMO_MOB_MAX_COUNT.get();
+        int min = Math.max(1, Math.min(3, Config.SUMO_MOB_MIN_COUNT.get()));
+        int max = Math.max(min, Math.min(3, Config.SUMO_MOB_MAX_COUNT.get()));
         double ringRadius = Math.max(2.0, arena.getRadius() - 1);
-        List<Mob> spawned = Taunts.spawnHostileRing(
+        List<Mob> spawned = Taunts.spawnSumoHostileRing(
                 minigameLevel, player,
                 start.getX() + 0.5, start.getY(), start.getZ() + 0.5,
                 min, max, ringRadius, 0.5);
@@ -195,6 +208,18 @@ public class SumoMinigame extends Minigame {
             var kr = mob.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
             if (kr != null) kr.setBaseValue(0.0);
         }
+    }
+
+    @Override
+    public void handlePlayerReconnect(ServerPlayer player) {
+        boolean wasTracked = disconnectedSessions.containsKey(player.getUUID())
+                || activeSessions.containsKey(player.getUUID());
+        super.handlePlayerReconnect(player);
+        if (!wasTracked) return;
+
+        clearArenaMobs();
+        restoreInventory(player);
+        markArenaNeedsRebuild();
     }
 
     private void pruneMobs() {
