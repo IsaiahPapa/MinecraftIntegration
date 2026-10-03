@@ -39,7 +39,7 @@ public class Config {
     public static final String CATEGORY_GENERAL = "General";
     public static final String CATEGORY_CHAT_ALERTS = "Alerts";
     public static final String CATEGORY_QUEUE = "Queue";
-    public static final int CURRENT_CONFIG_VERSION = 15;
+    public static final int CURRENT_CONFIG_VERSION = 16;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -68,8 +68,8 @@ public class Config {
                 .define("parkour.enabled", true);
 
         PARKOUR_DURATION_SECONDS = builder
-                .comment("Time limit for parkour V1/V2; Prism Relay V3 uses 30 seconds")
-                .defineInRange("parkour.duration_seconds", 25, 5, 120);
+                .comment("Time limit in seconds for every parkour arena version (the checkpoint adds 7 more)")
+                .defineInRange("parkour.duration_seconds", 30, 5, 120);
 
         PARKOUR_FAIL_DAMAGE = builder
                 .comment("Damage dealt on failing to complete the parkour course (2 damage = 1 heart)")
@@ -225,6 +225,13 @@ public class Config {
                 SUMO_MOB_MAX_COUNT.set(3);
             }
         }
+        if (previousVersion < 16) {
+            // The parkour time limit now applies to every arena version, so
+            // move the old V1/V2 default up to the 30 seconds V3 always used.
+            if (PARKOUR_DURATION_SECONDS.get() == 25) {
+                PARKOUR_DURATION_SECONDS.set(30);
+            }
+        }
         CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
     }
 
@@ -238,7 +245,7 @@ public class Config {
         TNT_RUN_FLOOR_SIZE.set(20);
         TNT_RUN_FLOOR_COUNT.set(2);
         PARKOUR_ENABLED.set(true);
-        PARKOUR_DURATION_SECONDS.set(25);
+        PARKOUR_DURATION_SECONDS.set(30);
         PARKOUR_FAIL_DAMAGE.set(8);
         PARKOUR_ARENA_VERSION.set(3);
         DROPPER_ENABLED.set(true);

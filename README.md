@@ -91,7 +91,7 @@ In-game: **Mods → Creati's Bot Integration → Config**
 |---------|-------------|
 | Alert Key | Your bot key from the Creati's Bot dashboard |
 | Chat Alerts | Show chat messages when taunts are triggered |
-| Parkour Arena Version | Choose legacy V1, Foundry Sprint V2, or 30-second Prism Relay V3 |
+| Parkour Arena Version | Choose legacy V1, Foundry Sprint V2, or Prism Relay V3 |
 | Queue System | Queue conflicting minigames, visual effects, taunts, and buffs locally |
 | Queue Sidebar | Show active items and up to four queued entries, with a remaining count |
 | Activity Feed | Show up to five recent trigger notifications for five seconds |

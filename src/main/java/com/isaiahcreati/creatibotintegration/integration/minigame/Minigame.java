@@ -333,7 +333,7 @@ public abstract class Minigame {
         player.level().playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
-    private static void sendTitle(ServerPlayer player, Component title, Component subtitle) {
+    protected static void sendTitle(ServerPlayer player, Component title, Component subtitle) {
         player.connection.send(new ClientboundSetTitlesAnimationPacket(5, 15, 5));
         player.connection.send(new ClientboundSetSubtitleTextPacket(subtitle));
         player.connection.send(new ClientboundSetTitleTextPacket(title));

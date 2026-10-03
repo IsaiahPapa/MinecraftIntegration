@@ -20,16 +20,25 @@ public class ParkourCourse {
     private static final String TEXT_MARKER_TAG = "creati_parkour_text";
     private record FloatingLabel(BlockPos pos, Component text) {}
 
+    /** Inclusive block area a player stands in (feet level) to finish. */
+    private record FinishPad(int minX, int maxX, int feetY, int minZ, int maxZ) {
+        boolean contains(BlockPos feet) {
+            return feet.getY() == feetY
+                    && feet.getX() >= minX && feet.getX() <= maxX
+                    && feet.getZ() >= minZ && feet.getZ() <= maxZ;
+        }
+    }
+
     private final List<ArmorStand> floatingTextStands = new ArrayList<>();
 
     private static final BlockPos V1_START = new BlockPos(0, 65, 0);
-    private static final BlockPos V1_END = new BlockPos(0, 66, 42);
+    private static final FinishPad V1_FINISH = new FinishPad(-1, 1, 67, 41, 43);
     private static final BlockPos V2_START = new BlockPos(0, 65, 0);
-    private static final BlockPos V2_END = new BlockPos(0, 69, 48);
+    private static final FinishPad V2_FINISH = new FinishPad(-2, 2, 70, 46, 50);
     private static final BlockPos V2_CHECKPOINT_PLATE = new BlockPos(0, 67, 23);
     private static final BlockPos V2_CHECKPOINT_RESPAWN = new BlockPos(0, 67, 22);
     private static final BlockPos V3_START = new BlockPos(0, 65, 0);
-    private static final BlockPos V3_END = new BlockPos(2, 69, 53);
+    private static final FinishPad V3_FINISH = new FinishPad(0, 4, 70, 51, 55);
     private static final BlockPos V3_CHECKPOINT_PLATE = new BlockPos(-3, 67, 24);
     private static final BlockPos V3_CHECKPOINT_RESPAWN = new BlockPos(-3, 67, 23);
 
@@ -52,12 +61,18 @@ public class ParkourCourse {
         };
     }
 
-    public BlockPos getEndPosition() {
-        return switch (getArenaVersion()) {
-            case 1 -> V1_END;
-            case 3 -> V3_END;
-            default -> V2_END;
+    /**
+     * Landing anywhere on the finish pad completes the run; the pressure plate
+     * only marks the middle. Requiring the exact plate made players who stuck
+     * the final jump still lose seconds shuffling onto one block.
+     */
+    public boolean isOnFinishPad(BlockPos feet) {
+        FinishPad pad = switch (getArenaVersion()) {
+            case 1 -> V1_FINISH;
+            case 3 -> V3_FINISH;
+            default -> V2_FINISH;
         };
+        return pad.contains(feet);
     }
 
     public boolean hasCheckpoint() {
@@ -180,10 +195,14 @@ public class ParkourCourse {
         // 14. Water hazard gap (1x1 iron) — a 3-block gap over a water pit.
         //     Falling into the water resets the player to the start.
         buildPlatform(level, 0, 69, 40, 1, Blocks.IRON_BLOCK);
-        // Water pit below the gap (visual hazard + early-reset trigger).
+        // Water pit below the gap (visual hazard + early-reset trigger). It is
+        // placed without block updates on a solid bed so it can't flow away
+        // into the void below the course.
         for (int dx = -1; dx <= 1; dx++) {
-            level.setBlockAndUpdate(new BlockPos(dx, 63, 38), Blocks.WATER.defaultBlockState());
-            level.setBlockAndUpdate(new BlockPos(dx, 63, 39), Blocks.WATER.defaultBlockState());
+            for (int z = 38; z <= 39; z++) {
+                level.setBlock(new BlockPos(dx, 62, z), Blocks.STONE.defaultBlockState(), 2);
+                level.setBlock(new BlockPos(dx, 63, z), Blocks.WATER.defaultBlockState(), 2);
+            }
         }
 
         // 15. End platform (3x3 diamond) with pressure plate — step down -3.
@@ -228,11 +247,14 @@ public class ParkourCourse {
         // automatic while preserving a readable sprint rhythm.
         buildRect(level, 3, 3, 67, 27, 28, Blocks.CUT_COPPER);
         buildRect(level, 5, 6, 68, 31, 31, Blocks.EXPOSED_CUT_COPPER);
-        buildRect(level, 2, 2, 69, 35, 36, Blocks.WEATHERED_CUT_COPPER);
+        // Kept within a 1x2 diagonal of the previous pad: the old position
+        // asked for a three-block gap while climbing, the only near-maximum
+        // jump on an otherwise rhythm-focused course.
+        buildRect(level, 3, 3, 69, 34, 35, Blocks.WEATHERED_CUT_COPPER);
 
-        // Ice supplies momentum for the only full four-block gap. The finish
-        // is 5x5, so the hard jump has a generous landing instead of a tiny pad.
-        buildRect(level, 0, 0, 69, 39, 42, Blocks.PACKED_ICE);
+        // Ice supplies momentum for the final three-block gap. The finish is
+        // 5x5, so the last jump has a generous landing instead of a tiny pad.
+        buildRect(level, 0, 0, 69, 38, 42, Blocks.PACKED_ICE);
         setBlock(level, 0, 69, 42, Blocks.LIME_CONCRETE);
         buildRect(level, -2, 2, 69, 46, 50, Blocks.DIAMOND_BLOCK);
         buildRect(level, -1, 1, 69, 47, 49, Blocks.EMERALD_BLOCK);
@@ -280,8 +302,8 @@ public class ParkourCourse {
         buildRect(level, 0, 0, 69, 43, 44, Blocks.PURPUR_BLOCK);
         buildRect(level, 3, 4, 69, 47, 47, Blocks.CHISELED_QUARTZ_BLOCK);
 
-        // A full four-block final gap, but with a broad landing so success is
-        // about carrying momentum rather than hitting one exact pixel.
+        // A three-block final gap with a broad landing, so success is about
+        // carrying momentum rather than hitting one exact pixel.
         buildRect(level, 0, 4, 69, 51, 55, Blocks.QUARTZ_BRICKS);
         buildRect(level, 1, 3, 69, 52, 54, Blocks.DIAMOND_BLOCK);
         setBlock(level, 2, 69, 53, Blocks.EMERALD_BLOCK);

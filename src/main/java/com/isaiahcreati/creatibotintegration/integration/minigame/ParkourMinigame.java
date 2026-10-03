@@ -10,6 +10,9 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 
@@ -20,24 +23,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ParkourMinigame extends Minigame {
 
-    private static final int V3_DURATION_SECONDS = 30;
+    private static final int COUNTDOWN_SECONDS = 3;
     private static final int CHECKPOINT_BONUS_SECONDS = 7;
+
+    // Every platform on every version is at Y=64 or above, so dropping below
+    // this means the jump was missed. Catching it here returns the player a
+    // second earlier than waiting for the shared void check at Y=49.
+    private static final double MISSED_JUMP_Y = 60;
+
     private final ParkourCourse course = new ParkourCourse();
     private final Map<UUID, BlockPos> checkpointRespawns = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> checkpointBonusTicks = new ConcurrentHashMap<>();
-    private final Set<UUID> announcedCheckpoints = ConcurrentHashMap.newKeySet();
-
-    @Override
-    public void enterPlayer(ServerPlayer player, String redeemerName) {
-        if (isInMinigame(player)) return;
-        checkpointRespawns.remove(player.getUUID());
-        checkpointBonusTicks.remove(player.getUUID());
-        announcedCheckpoints.remove(player.getUUID());
-        super.enterPlayer(player, redeemerName);
-        if (isInActiveMinigame(player)) {
-            course.reconcileFloatingText((ServerLevel) player.level());
-        }
-    }
+    private final Map<UUID, Integer> fallCounts = new ConcurrentHashMap<>();
 
     @Override
     public String getId() { return "parkour"; }
@@ -49,7 +46,7 @@ public class ParkourMinigame extends Minigame {
 
     @Override
     public Component getSubtitle() {
-        return Component.literal("Complete the course in " + getDurationSeconds() + " seconds!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF").getOrThrow()));
+        return Component.literal("Reach the finish in " + getDurationSeconds() + " seconds!").setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFFFF").getOrThrow()));
     }
 
     @Override
@@ -59,11 +56,10 @@ public class ParkourMinigame extends Minigame {
     public boolean hasTimer() { return true; }
 
     @Override
-    public int getDurationSeconds() {
-        return course.getArenaVersion() == 3
-                ? V3_DURATION_SECONDS
-                : Config.PARKOUR_DURATION_SECONDS.get();
-    }
+    public int getDurationSeconds() { return Config.PARKOUR_DURATION_SECONDS.get(); }
+
+    @Override
+    public int getGracePeriodSeconds() { return COUNTDOWN_SECONDS; }
 
     @Override
     protected int getAdditionalDurationTicks(ServerPlayer player) {
@@ -91,18 +87,23 @@ public class ParkourMinigame extends Minigame {
     }
 
     @Override
+    protected void onSessionStart(ServerPlayer player, ServerLevel level, MinigamePlayerState state) {
+        checkpointRespawns.remove(player.getUUID());
+        checkpointBonusTicks.remove(player.getUUID());
+        fallCounts.remove(player.getUUID());
+        course.reconcileFloatingText(level);
+    }
+
+    @Override
+    protected String getStatusText(ServerPlayer player, int remainingSeconds) {
+        String status = super.getStatusText(player, remainingSeconds);
+        int falls = fallCounts.getOrDefault(player.getUUID(), 0);
+        return falls > 0 ? status + "  |  Falls: " + falls : status;
+    }
+
+    @Override
     public boolean checkWin(ServerPlayer player) {
-        BlockPos playerPos = player.blockPosition();
-        BlockPos endPos = course.getEndPosition();
-
-        if (player.level().getBlockState(playerPos).is(Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE)
-                && Math.abs(playerPos.getX() - endPos.getX()) <= 2
-                && Math.abs(playerPos.getZ() - endPos.getZ()) <= 2
-                && Math.abs(playerPos.getY() - endPos.getY()) <= 2) {
-            return true;
-        }
-
-        return false;
+        return course.isOnFinishPad(player.blockPosition());
     }
 
     @Override
@@ -114,26 +115,21 @@ public class ParkourMinigame extends Minigame {
             course.reconcileFloatingText((ServerLevel) player.level());
         }
 
-        if (course.hasCheckpoint() && course.isInCheckpointArea(player.blockPosition())) {
+        if (course.hasCheckpoint() && course.isInCheckpointArea(player.blockPosition())
+                && !checkpointRespawns.containsKey(player.getUUID())) {
             checkpointRespawns.put(player.getUUID(), course.getCheckpointRespawnPosition());
-            if (announcedCheckpoints.add(player.getUUID())) {
-                checkpointBonusTicks.put(player.getUUID(), CHECKPOINT_BONUS_SECONDS * 20);
-                player.sendSystemMessage(Component.literal(
-                                "Checkpoint reached! +" + CHECKPOINT_BONUS_SECONDS + " seconds")
-                        .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow()).withBold(true)), true);
-            }
+            checkpointBonusTicks.put(player.getUUID(), CHECKPOINT_BONUS_SECONDS * 20);
+            // The action bar is owned by the timer, so announce this as a subtitle.
+            sendTitle(player, Component.empty(), Component.literal(
+                            "Checkpoint! +" + CHECKPOINT_BONUS_SECONDS + " seconds")
+                    .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFFF55").getOrThrow()).withBold(true)));
+            player.level().playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.2F);
         }
 
-        // Falling into the water hazard resets the player to their latest checkpoint (same as
-        // a void fall, but caught earlier so the player doesn't sink).
-        if (player.level().getBlockState(player.blockPosition()).is(Blocks.WATER)) {
-            resetToCheckpoint(player);
-            return;
-        }
-
-        // The modern basin frames are solid decoration; landing on their low walls or
-        // supports should reset the run instead of leaving the player stranded.
-        if (course.getArenaVersion() >= 2 && player.getY() < 60) {
+        // Missing a jump (into the water basin, onto the basin walls, or
+        // straight down) sends the player back to their latest checkpoint.
+        if (player.getY() < MISSED_JUMP_Y
+                || player.level().getBlockState(player.blockPosition()).is(Blocks.WATER)) {
             resetToCheckpoint(player);
         }
     }
@@ -150,9 +146,12 @@ public class ParkourMinigame extends Minigame {
 
     private void resetToCheckpoint(ServerPlayer player) {
         BlockPos respawnPos = checkpointRespawns.getOrDefault(player.getUUID(), course.getStartPosition());
-        player.teleportTo(respawnPos.getX() + 0.5, (double) respawnPos.getY(), respawnPos.getZ() + 0.5);
-        player.setDeltaMovement(0, 0, 0);
-        player.fallDistance = 0;
+        // Face back down the course so the player can retry immediately.
+        player.teleportTo((ServerLevel) player.level(), respawnPos.getX() + 0.5, respawnPos.getY(), respawnPos.getZ() + 0.5,
+                Set.<Relative>of(), 0f, player.getXRot(), false);
+        resetMotion(player);
+        fallCounts.merge(player.getUUID(), 1, Integer::sum);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.6F, 1.4F);
     }
 
     @Override
@@ -168,6 +167,6 @@ public class ParkourMinigame extends Minigame {
     protected void onSessionEnd(ServerPlayer player) {
         checkpointRespawns.remove(player.getUUID());
         checkpointBonusTicks.remove(player.getUUID());
-        announcedCheckpoints.remove(player.getUUID());
+        fallCounts.remove(player.getUUID());
     }
 }
